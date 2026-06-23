@@ -1,0 +1,8 @@
+{
+  "name": "AgenLink.Editor.Neuron.Tests",
+  "references": ["AgenLink.Editor", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+  "includePlatforms": ["Editor"],
+  "precompiledReferences": ["nunit.framework.dll"],
+  "autoReferenced": false,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

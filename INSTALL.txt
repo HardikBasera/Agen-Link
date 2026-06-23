@@ -1,0 +1,280 @@
+============================================================
+ AGEN-LINK - INSTALL GUIDE  (Windows)
+ Run an AI CLI (Claude or Google Antigravity) inside the Unity Editor.
+============================================================
+
+WHAT THIS IS
+------------
+A Unity tool. It puts a real terminal running the "claude" CLI inside a window
+in the Unity Editor, right next to your project. You type prompts; Claude writes
+and edits the C# scripts in your open project, reads your Console / compile
+errors to fix code, maps your project as a knowledge graph, keeps a local undo
+history, and can back the whole project up to GitHub.
+
+The Agen-Link window has these tabs:
+  Terminal  -> the embedded "claude" CLI (the main surface)
+  History   -> browse past Claude conversations for this project
+  GitHub    -> one-click whole-project backup (browser sign-in)
+  Neuron    -> a live knowledge graph of your project
+  Settings  -> CLI (Claude or Antigravity), font size, bridge port, MCP/agy paths
+
+In this folder:
+  unity-package/   -> the part you add to Unity
+  mcp-server/      -> helper program (built once by the setup script)
+  pty-host/        -> terminal helper (built once by the setup script)
+  install/setup.ps1-> the one-time build/setup script
+  README.md        -> full documentation
+
+This build targets WINDOWS 10/11.
+
+
+============================================================
+ TWO WAYS TO INSTALL
+============================================================
+There is one thing you must install BY HAND first: the Claude Code CLI
+(it is the "brain" - it cannot install itself). After that, you can let
+CLAUDE ITSELF install and build everything else for you from the terminal.
+
+  * EASY PATH  -> do STEP 0, then paste one instruction into "claude"
+                 and it installs/builds the rest (STEP 1A).
+  * MANUAL PATH-> do STEP 0, then run the commands yourself (STEP 1B).
+
+Either way you still install Unity via Unity Hub by hand (STEP 2), because
+choosing a Unity version and signing in is a graphical step Claude can't do.
+
+
+============================================================
+ STEP 0 - BOOTSTRAP (always required, by hand)
+============================================================
+You need Node.js (to run the helpers AND to install the Claude CLI), then the
+Claude CLI itself.
+
+1. Install Node.js 18 or newer. Easiest on Windows - open PowerShell and run:
+
+       winget install -e --id OpenJS.NodeJS.LTS
+
+   (Or download it from https://nodejs.org and run the installer.)
+   Then CLOSE and re-open PowerShell so "node" is on your PATH. Check:
+
+       node --version
+
+2. Install the Claude Code CLI and log in:
+
+       npm install -g @anthropic-ai/claude-code
+       claude
+
+   The first time you run "claude" it opens a browser to log in. You need an
+   active Claude plan. Once you see the claude prompt, type /exit for now.
+
+3. (Optional) To also run Google's Antigravity agent in the terminal, install the
+   Antigravity CLI (agy) and sign in:
+
+       Install from  https://antigravity.google/docs/cli-install
+       agy           (sign in once, then exit)
+
+   You can switch between Claude and Antigravity later in the Settings tab.
+
+
+============================================================
+ STEP 1A - EASY PATH: let Claude install + build the rest
+============================================================
+1. Open PowerShell and go INTO this folder (change the path to wherever you
+   put it), then start claude:
+
+       cd "C:\path\to\Agen-Link"
+       claude
+
+2. Paste this instruction and press Enter:
+
+   --------------------------------------------------------
+   Install the prerequisites for this Agen-Link Unity tool on my Windows PC,
+   then build it. Using winget, install whichever of these are missing: Git
+   (Git.Git), the GitHub CLI (GitHub.cli), and Unity Hub (Unity.UnityHub).
+   Then run install\setup.ps1 in this folder to build the MCP server and the
+   Terminal pty-host. Report any errors and tell me what to do next in Unity.
+   --------------------------------------------------------
+
+3. Claude will ask permission before each command it runs (winget, the setup
+   script). Approve them. If a UAC / "allow this app to make changes" window
+   pops up, click Yes.
+
+4. When it finishes, continue at STEP 2 (install Unity) and STEP 3.
+
+   For reference, that is exactly the same work as the manual commands below.
+
+
+============================================================
+ STEP 1B - MANUAL PATH: run the commands yourself
+============================================================
+In PowerShell, from inside this folder:
+
+1. Install the extra tools (skip any you already have):
+
+       winget install -e --id Git.Git
+       winget install -e --id GitHub.cli
+       winget install -e --id Unity.UnityHub
+
+2. Build the helpers (MCP server + Terminal pty-host) and confirm gh:
+
+       powershell -ExecutionPolicy Bypass -File ".\install\setup.ps1"
+
+   Example with a full path:
+       powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\setup.ps1"
+
+   Wait until it prints "Done." It downloads npm packages, so it needs internet.
+
+NOTE: Do NOT move or rename the Agen-Link folder after setup. The tool finds the
+helper programs by looking next to the unity-package folder.
+
+
+============================================================
+ STEP 2 - INSTALL UNITY (by hand, via Unity Hub)
+============================================================
+Claude can install Unity Hub for you, but picking the Unity version and signing
+in is a graphical step you do yourself.
+
+1. Open Unity Hub (installed in STEP 1).
+2. Sign in with a Unity account (free Personal license is fine).
+3. Installs -> Install Editor -> pick Unity 2021.3 LTS or newer
+   (tested on 2022.3 LTS and Unity 6). Add the modules you need; the defaults
+   are fine for C# scripting.
+
+
+============================================================
+ STEP 3 - ADD THE TOOL TO YOUR UNITY PROJECT
+============================================================
+Do this inside each Unity project you want to use it in.
+
+1. Open (or create) your project in Unity Hub.
+2. Top menu:  Window  ->  Package Manager
+3. Click the  +  button (top-left)  ->  "Add package from disk..."
+4. Select this file:
+      <THIS FOLDER>\unity-package\package.json
+5. Wait for Unity to finish compiling (spinner at the bottom-right).
+   It also pulls in Newtonsoft.Json automatically.
+6. Open the Console (Window -> General -> Console). You should see:
+      [Agen-Link] Listening on 127.0.0.1:6577
+   If you see that line, the bridge is working.
+
+
+============================================================
+ STEP 4 - USE IT (the Terminal tab)
+============================================================
+1. Top menu:  Window  ->  Agen-Link
+   (Settings tab: pick the CLI - Claude or Antigravity. Default is Claude.)
+2. Go to the "Terminal" tab and press  "Start session".
+   This launches your selected CLI (Claude or Antigravity) inside Unity - your login,
+   skills, plugins and slash-commands all apply. The Unity MCP server is added on
+   top, so it can read your live Editor (Console, compile errors, scene), and
+   both CLIs share one local project memory (AGENTS.md + the agen_memory_* tools).
+3. Type a prompt, for example:
+      Create Assets/Scripts/Hello.cs with a MonoBehaviour that logs
+      "Hello from Claude" on Start.
+   Claude works, then Unity recompiles and the new/edited files appear.
+
+It can also change files you already have, e.g.:
+      Add a public ResetScore() method to my GameManager and call it from Start.
+
+It can also analyze and optimize your scene, e.g.:
+      Analyze this scene's performance and optimize it.
+   The AI audits the scene + asset import settings (polycounts, lights, textures,
+   batching...), records play-mode performance counters, reports what to fix, and
+   can apply safe fixes (Undo-able; you review and save the scene yourself).
+
+The session SURVIVES script recompiles (it reconnects and replays). Use
+"Restart" / "Stop" to control it.
+
+
+============================================================
+ OTHER TABS (quick tour)
+============================================================
+HISTORY
+  A read-only browser of your past Claude conversations for this project
+  (grouped Today / Yesterday / This week / Older). Shows your prompts, Claude's
+  replies, and compact action markers like "edited PlayerController.cs".
+
+NEURON  (project knowledge graph)
+  A live, Assets-only dependency graph built right in the Editor (no internet).
+  Scenes are clusters, related scripts group into "systems", and you can switch
+  between Overview and a Focused neighbourhood view. Ask Claude
+  "analyze and name the Neuron systems" to get human-readable system names.
+
+GITHUB  (optional, whole-project backup)
+  1. Open the "GitHub" tab and click "Sign in to GitHub" - a one-time code pops
+     up (auto-copied) and your browser opens; no password is typed into Unity.
+     (If it says gh is not found, finish STEP 1, then RESTART Unity.)
+  2. Either "Link existing" repo (Load my repositories -> pick -> Link), or
+     "Create new" (it makes a PRIVATE repo).
+  3. Use "Commit now" / "Push" to back up. The account + repo are confirmed
+     before every Push so you don't push to the wrong place.
+
+
+============================================================
+ SETTINGS TAB
+============================================================
+- CLI: choose Claude or Antigravity for the Terminal (restart the session to apply).
+- Terminal font size.
+- Bridge port + "Restart bridge": change the port if another open Unity Editor
+  is already using 6577.
+- MCP server path: auto-detected; only set this if it says "not found".
+- Antigravity CLI path: auto-detected from %LOCALAPPDATA%\agy; set only if agy isn't found.
+
+SHARED MEMORY
+  Both CLIs read/write one local project memory, so you don't re-explain the
+  project when you switch. It lives in (gitignored): AGENTS.md (always loaded
+  into context) + AgenLink~/memory/ (searched via the agen_memory_* tools). Tell
+  either CLI to "remember" something and the other can recall it - neither has to
+  re-scan the project from scratch.
+
+
+============================================================
+ TROUBLESHOOTING
+============================================================
+"claude is not recognized" (in PowerShell)
+    -> Finish STEP 0: install Node.js, then
+       npm install -g @anthropic-ai/claude-code, then re-open PowerShell.
+
+"Failed to start on port 6577" / "Bridge server is not running"
+    -> Make sure the Agen-Link window is open. Another Editor may hold the port;
+       change it in Settings -> Bridge server.
+
+Terminal: "pty-host is not built"
+    -> Run install\setup.ps1 (it installs node-pty), then RESTART Unity.
+
+"MCP server not found"
+    -> Run install\setup.ps1 again (it builds mcp-server\build\index.js), or set
+       the path in the Settings tab.
+
+"agy is not recognized" / Antigravity won't start in the Terminal
+    -> Install the Antigravity CLI from https://antigravity.google/docs/cli-install,
+       then RESTART Unity. Run "agy" once to sign in. Or set its path in
+       Settings -> Antigravity CLI.
+
+Antigravity runs but doesn't see the Unity tools (agen_*)
+    -> Make sure the MCP server is built (install\setup.ps1). Agen-Link writes the
+       bridge into ~/.gemini/config/mcp_config.json on Start; restart the session.
+
+GitHub tab says gh is not found
+    -> Finish STEP 1 (installs the GitHub CLI), then RESTART Unity so it picks
+       up the new PATH.
+
+Compile errors in the Console right after adding the package
+    -> The C# only compiles inside Unity, so a fresh machine may surface an
+       issue. Start a Terminal session and ask Claude to fix the errors it sees.
+
+winget is not recognized
+    -> winget ships with Windows 10/11 "App Installer". Update it from the
+       Microsoft Store, or install each tool from its website (links in README).
+
+
+============================================================
+ SUMMARY (the short version)
+============================================================
+0. Install Node.js, then:  npm install -g @anthropic-ai/claude-code  ->  claude (log in)
+   (optional) install the Antigravity CLI (agy) from antigravity.google  ->  agy (sign in)  to use it too
+1. In the folder, run "claude" and ask it to install Git + GitHub CLI + Unity Hub
+   and run install\setup.ps1   (or run those commands yourself - STEP 1B)
+2. Install a Unity Editor via Unity Hub.
+3. Unity: Package Manager -> Add package from disk -> unity-package\package.json
+4. Window -> Agen-Link -> Terminal -> Start session -> type a prompt.
+============================================================

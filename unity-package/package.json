@@ -1,0 +1,20 @@
+{
+  "name": "com.hardikbasera.agenlink",
+  "version": "0.1.1",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
+  "displayName": "Agen-Link",
+  "description": "Drive Claude Code from inside the Unity Editor. Run the real Claude CLI in an embedded terminal, browse your past sessions in a conversation history, read live editor state (console, compile errors, scene) over MCP, and back the project up to GitHub.",
+  "unity": "2021.3",
+  "author": {
+    "name": "HardikBasera"
+  },
+  "keywords": [
+    "claude",
+    "mcp",
+    "ai",
+    "editor",
+    "automation"
+  ]
+}

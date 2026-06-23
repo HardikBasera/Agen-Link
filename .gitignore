@@ -1,0 +1,30 @@
+# ---- Node (helpers: mcp-server, pty-host) ----
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editors / IDEs ----
+.vs/
+.idea/
+.vscode/
+
+# ---- Logs / temp ----
+*.log
+*.tmp
+
+# ---- Local AI-CLI / tool data (never publish) ----
+.claude/settings.local.json
+.antigravitycli/
+.superpowers/
+AgenLink~/
+
+# ---- Throwaway spike scripts ----
+pty-host/spike/
+
+# ---- Internal design/planning docs + handoff (kept locally, not published) ----
+docs/superpowers/
+CLAUDE.md

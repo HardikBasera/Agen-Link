@@ -139,15 +139,25 @@ namespace AgenLink.Neuron
             if (GUILayout.Button("⟳ Rebuild", EditorStyles.toolbarButton, GUILayout.Width(76))) { GraphStore.RequestRebuild(); _repaint?.Invoke(); }
             EditorGUILayout.EndHorizontal();
 
-            int unnamed = 0;
-            foreach (var s in g.AllSystems())
+            string info;
+            if (g == null)
             {
-                if (s.Id != null && s.Id.EndsWith("#scattered")) continue;
-                if (GraphStore.SystemNames == null || !GraphStore.SystemNames.ContainsKey(s.Signature())) unnamed++;
+                // Fresh project: no graph cached yet. OnGUI draws the "Build graph" prompt below;
+                // keep the toolbar's stats line null-safe so it doesn't throw before that runs.
+                info = GraphStore.Building ? "Building graph…" : "No graph cached yet";
             }
-            string info = $"{g.NodeCount} nodes · {g.EdgeCount} edges · {g.SystemCount} systems";
-            if (unnamed > 0) info += $"  ·  {unnamed} unnamed (ask Claude to analyze)";
-            if (_view != null) info += $"  ·  showing {_view.Nodes.Count}" + (_view.Truncated ? " (capped)" : "");
+            else
+            {
+                int unnamed = 0;
+                foreach (var s in g.AllSystems())
+                {
+                    if (s.Id != null && s.Id.EndsWith("#scattered")) continue;
+                    if (GraphStore.SystemNames == null || !GraphStore.SystemNames.ContainsKey(s.Signature())) unnamed++;
+                }
+                info = $"{g.NodeCount} nodes · {g.EdgeCount} edges · {g.SystemCount} systems";
+                if (unnamed > 0) info += $"  ·  {unnamed} unnamed (ask Claude to analyze)";
+                if (_view != null) info += $"  ·  showing {_view.Nodes.Count}" + (_view.Truncated ? " (capped)" : "");
+            }
             if (!string.IsNullOrEmpty(_status)) info += "  ·  " + _status;
             EditorGUILayout.LabelField(info, EditorStyles.miniLabel);
         }

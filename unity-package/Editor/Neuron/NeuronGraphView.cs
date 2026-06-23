@@ -395,6 +395,12 @@ namespace AgenLink.Neuron
             Vector2 origin = Origin(canvas);
             DrawGrid(canvas, origin);
 
+            // Empty / degenerate graph: EnsureView could not lay it out (e.g. ComputeNestedClusters
+            // returned null for a project with no mappable assets — see the _pos == null guard in
+            // BuildClusterGeometry). Nothing to draw; bail before any _view/_pos access, keeping the
+            // BeginClip balanced.
+            if (_view == null || _pos == null) { GUI.EndClip(); return; }
+
             string focus = _hover ?? _selected;
             if (_mode == 0 && !string.IsNullOrEmpty(_centerId)) focus = _hover ?? _selected ?? _centerId;
             HashSet<string> active = null;

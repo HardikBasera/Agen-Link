@@ -190,6 +190,8 @@ namespace AgenLink.Analysis
 
         private void DrawStatsStrip()
         {
+            // Guard a partial session restore that set findings but not stats (see TryRestoreSessionState).
+            if (_sceneStats == null || _assetStats == null) return;
             string s = "△ " + _sceneStats.Triangles.ToString("n0") + " tris · "
                      + _sceneStats.Renderers + " renderers (" + _sceneStats.StaticRenderers + " static) · "
                      + _sceneStats.RealtimeLights + " realtime lights";

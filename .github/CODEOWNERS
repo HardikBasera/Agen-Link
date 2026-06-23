@@ -1,0 +1,4 @@
+# Every change requires review from the maintainer before it can be merged.
+# Combined with branch protection ("Require review from Code Owners"), this means
+# no pull request merges into main without @HardikBasera's approval.
+* @HardikBasera

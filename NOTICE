@@ -1,0 +1,26 @@
+Agen-Link
+Copyright 2026 Hardik Basera
+
+This product includes software developed by Hardik Basera and the Agen-Link
+contributors.
+
+Licensed under the Apache License, Version 2.0 (see the LICENSE file).
+
+------------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------------
+
+This project depends on the following open-source packages, retrieved at
+install time via npm (they are not redistributed in this repository):
+
+  - node-pty                     (MIT License)      https://github.com/microsoft/node-pty
+  - @modelcontextprotocol/sdk    (MIT License)      https://github.com/modelcontextprotocol
+  - zod                          (MIT License)      https://github.com/colinhacks/zod
+  - typescript                   (Apache-2.0)       https://github.com/microsoft/TypeScript
+
+The Unity package depends on Newtonsoft.Json for Unity
+(com.unity.nuget.newtonsoft-json), distributed by Unity Technologies under the
+MIT License.
+
+Each component is the property of its respective copyright holders and is used
+under the terms of its own license.

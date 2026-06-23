@@ -80,6 +80,25 @@ Three processes keep the AI session alive across Unity's domain reloads (recompi
   and never auto-saved; asset-import fixes reimport immediately (and are flagged as permanent).
 - The bridge listens only on **localhost** (`127.0.0.1`) and is skipped in Asset Import Worker processes.
 
+## Security
+
+Agen-Link runs on your machine and is designed to stay local:
+
+- **Localhost only.** The Editor bridge (`127.0.0.1:6577`) and the terminal host (an ephemeral
+  `127.0.0.1` port) never bind to a network-facing interface. **Don't reconfigure the bridge to
+  `0.0.0.0`** — that would expose the live Editor to your network without authentication.
+- **The CLI keeps your access.** The terminal runs the *real* Claude / Antigravity CLI with your
+  own login; the bridge only **adds** live-editor awareness, it doesn't sandbox the CLI. If your
+  CLI account or machine is compromised, so is the bridge.
+- **One write-capable tool.** Most `agen_*` tools are read-only. `agen_apply_fixes` applies
+  whitelisted scene/asset fixes — review audit findings first. Scene edits are Undo-able and not
+  auto-saved; asset-import edits reimport immediately.
+- **Don't log secrets.** The bridge can read the Unity Console — keep API keys/tokens out of it,
+  in git-ignored config loaded at runtime.
+
+Found a vulnerability? Please report it privately — see [SECURITY.md](SECURITY.md). Don't open a
+public issue for security problems.
+
 ## Troubleshooting
 
 - **"Failed to start on port 6577"** → another Editor may hold the port; change it in **Settings ▸ Bridge server**.
@@ -95,3 +114,15 @@ pty-host/        Node terminal host (Windows ConPTY) for the embedded Terminal
 mcp-server/      Node / TypeScript MCP server (src/ → build/)
 install/         setup.ps1 (one-time build + gh install)
 ```
+
+## Contributing
+
+Contributions are welcome! Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** for the fork →
+pull-request workflow, the local dev setup, and the project conventions (notably: rebuild and
+commit `mcp-server/build/`, and no `package.json` install scripts). By participating you agree to
+the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+Licensed under the **[Apache License 2.0](LICENSE)**. Copyright © 2026 Hardik Basera. See
+[NOTICE](NOTICE) for third-party attributions.

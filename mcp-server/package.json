@@ -2,6 +2,7 @@
   "name": "agen-link-mcp",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "MCP server exposing the live Unity Editor (console, compile errors, project info, scene) to Claude over a localhost TCP bridge.",
   "bin": {

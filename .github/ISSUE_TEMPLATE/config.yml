@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & ideas (Discussions)
+    url: https://github.com/HardikBasera/Agen-Link/discussions
+    about: Ask a question, share an idea, or get help. Please don't use the issue tracker for support questions.
+  - name: Report a security vulnerability
+    url: https://github.com/HardikBasera/Agen-Link/security/advisories/new
+    about: Privately report a security issue. Please do not open a public issue for vulnerabilities.

@@ -1,0 +1,77 @@
+name: Bug report
+description: Report something that isn't working in Agen-Link
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please **do not** report security
+        vulnerabilities here — see [SECURITY.md](../blob/main/SECURITY.md) for private reporting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I click X in the Y tab, Z happens. I expected...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Window ▸ Agen-Link
+        2. ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Console / terminal output
+      description: Paste any errors from the Unity Console or the embedded terminal. **Redact any secrets.**
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: unity-version
+    attributes:
+      label: Unity version
+      placeholder: "2022.3.x LTS / Unity 6"
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: "node -v"
+    validations:
+      required: true
+  - type: dropdown
+    id: cli
+    attributes:
+      label: Which CLI?
+      options:
+        - Claude Code
+        - Antigravity (agy)
+        - Both
+        - N/A
+    validations:
+      required: true
+  - type: input
+    id: agen-version
+    attributes:
+      label: Agen-Link version / commit
+      placeholder: "0.1.0 or commit SHA"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `install/setup.ps1` and did not move/rename the folder afterward.
+          required: true
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true

@@ -10,6 +10,15 @@ updates:
       prefix: "deps(mcp-server)"
     labels:
       - "dependencies"
+    # Build tooling: take minor/patch + security updates, but not major bumps.
+    # We adopt TypeScript / @types/node majors deliberately, aligned to the Node
+    # version we support. Runtime deps (e.g. zod) are intentionally NOT ignored —
+    # we want to see their major releases.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # Node helper: terminal host
   - package-ecosystem: "npm"

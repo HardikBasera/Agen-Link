@@ -91,17 +91,5 @@ namespace AgenLink.Neuron
             catch (Exception e) { Debug.LogError("[Agen-Link] Neuron build failed: " + e.Message); }
             finally { Building = false; OnChanged?.Invoke(); }
         }
-
-        [MenuItem("Window/Agen-Link/Rebuild Neuron Graph")]
-        private static void RebuildMenu()
-        {
-            var g = GraphBuilder.BuildProjectGraph();
-            ApplyCachedNames(g);
-            Current = g;
-            _triedLoad = true;
-            try { GraphSerializer.Save(g, SystemNames); } catch { }
-            OnChanged?.Invoke();
-            Debug.Log($"[Agen-Link] Neuron graph: {g.NodeCount} nodes, {g.EdgeCount} edges, {g.SystemCount} systems.");
-        }
     }
 }

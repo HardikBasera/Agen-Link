@@ -52,7 +52,7 @@ namespace AgenLink.Terminal
             error = null;
             string node = ResolveNodeExe();
             string entry = ResolvePtyHostEntry();
-            if (entry == null) { error = "pty-host not found. Run install/setup.ps1 to build it."; return false; }
+            if (entry == null) { error = "pty-host not found. Run install/setup.cmd to build it."; return false; }
 
             // Shared project memory files for whichever CLI runs (AGENTS.md + CLAUDE.md/GEMINI.md + .gitignore).
             try { ConfigBuilder.EnsureProjectMemoryFiles(); } catch { /* non-fatal: launch anyway */ }
@@ -114,7 +114,7 @@ namespace AgenLink.Terminal
             }
             if (port == 0)
             {
-                error = "pty-host did not report a port (is node-pty installed? run install/setup.ps1).";
+                error = "pty-host did not report a port (is node-pty installed? run install/setup.cmd).";
                 try { proc.Kill(); } catch { }
                 return false;
             }

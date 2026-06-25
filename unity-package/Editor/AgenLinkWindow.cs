@@ -145,7 +145,7 @@ namespace AgenLink
 
             if (PtyHostLauncher.ResolvePtyHostEntry() == null)
             {
-                EditorGUILayout.HelpBox("pty-host is not built. Run install/setup.ps1 (installs node-pty), then restart Unity.", MessageType.Warning);
+                EditorGUILayout.HelpBox("pty-host is not built. Run install/setup.cmd (installs node-pty), then restart Unity.", MessageType.Warning);
                 return;
             }
 
@@ -249,7 +249,7 @@ namespace AgenLink
             EditorGUILayout.LabelField("Account", EditorStyles.boldLabel);
             if (!_ghInstalled)
             {
-                EditorGUILayout.HelpBox("GitHub CLI (gh) not found. Run install/setup.ps1 to install it, then restart Unity.", MessageType.Warning);
+                EditorGUILayout.HelpBox("GitHub CLI (gh) not found. Run install/setup.cmd to install it, then restart Unity.", MessageType.Warning);
                 if (GUILayout.Button("Re-check", GUILayout.Width(80))) RefreshGitStatus();
             }
             else if (string.IsNullOrEmpty(_ghActiveAccount))

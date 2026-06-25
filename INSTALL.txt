@@ -23,7 +23,7 @@ In this folder:
   mcp-server/      -> helper program (built once by the setup script)
   pty-host/        -> terminal helper (built once by the setup script)
   install/setup.cmd-> double-click this to run the one-time setup
-  install/setup.ps1-> the setup script itself (setup.cmd runs it)
+  install/lib/     -> internal build script (setup.ps1) that setup.cmd runs
   README.md        -> full documentation
 
 This build targets WINDOWS 10/11.
@@ -91,7 +91,7 @@ Claude CLI itself.
    Install the prerequisites for this Agen-Link Unity tool on my Windows PC,
    then build it. Using winget, install whichever of these are missing: Git
    (Git.Git), the GitHub CLI (GitHub.cli), and Unity Hub (Unity.UnityHub).
-   Then run install\setup.ps1 in this folder to build the MCP server and the
+   Then run install\setup.cmd in this folder to build the MCP server and the
    Terminal pty-host. Report any errors and tell me what to do next in Unity.
    --------------------------------------------------------
 
@@ -122,10 +122,10 @@ In PowerShell, from inside this folder:
 
    Or run it yourself from a terminal:
 
-       powershell -ExecutionPolicy Bypass -File ".\install\setup.ps1"
+       powershell -ExecutionPolicy Bypass -File ".\install\lib\setup.ps1"
 
    Example with a full path:
-       powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\setup.ps1"
+       powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\lib\setup.ps1"
 
    Wait until it prints "Done." It downloads npm packages, so it needs internet.
 
@@ -250,10 +250,10 @@ SHARED MEMORY
        change it in Settings -> Bridge server.
 
 Terminal: "pty-host is not built"
-    -> Run install\setup.ps1 (it installs node-pty), then RESTART Unity.
+    -> Run install\setup.cmd (it installs node-pty), then RESTART Unity.
 
 "MCP server not found"
-    -> Run install\setup.ps1 again (it builds mcp-server\build\index.js), or set
+    -> Run install\setup.cmd again (it builds mcp-server\build\index.js), or set
        the path in the Settings tab.
 
 "agy is not recognized" / Antigravity won't start in the Terminal
@@ -262,7 +262,7 @@ Terminal: "pty-host is not built"
        Settings -> Antigravity CLI.
 
 Antigravity runs but doesn't see the Unity tools (agen_*)
-    -> Make sure the MCP server is built (install\setup.ps1). Agen-Link writes the
+    -> Make sure the MCP server is built (install\setup.cmd). Agen-Link writes the
        bridge into ~/.gemini/config/mcp_config.json on Start; restart the session.
 
 GitHub tab says gh is not found
@@ -284,7 +284,7 @@ winget is not recognized
 0. Install Node.js, then:  npm install -g @anthropic-ai/claude-code  ->  claude (log in)
    (optional) install the Antigravity CLI (agy) from antigravity.google  ->  agy (sign in)  to use it too
 1. In the folder, run "claude" and ask it to install Git + GitHub CLI + Unity Hub
-   and run install\setup.ps1   (or run those commands yourself - STEP 1B)
+   and run install\setup.cmd   (or run those commands yourself - STEP 1B)
 2. Install a Unity Editor via Unity Hub.
 3. Unity: Package Manager -> Add package from disk -> unity-package\package.json
 4. Window -> Agen-Link -> Terminal -> Start session -> type a prompt.

@@ -8,9 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `install/setup.cmd` — a double-clickable launcher for the one-time setup. It runs `setup.ps1`
-  with `-ExecutionPolicy Bypass` (so the Windows "downloaded from the internet" script block can't
-  stop it) and keeps the window open so the result is readable.
+- `install/setup.cmd` — a double-clickable launcher for the one-time setup. It runs the build
+  script with `-ExecutionPolicy Bypass` (so the Windows "downloaded from the internet" script
+  block can't stop it) and keeps the window open so the result is readable.
+
+### Changed
+- Moved the setup engine to `install/lib/setup.ps1` so the `install/` folder shows only the
+  double-clickable `setup.cmd` — clearer which file to run.
+- Removed the redundant `Window/Agen-Link/Rebuild Neuron Graph` menu item; rebuilding the Neuron
+  graph lives on the Neuron tab's **⟳ Rebuild** button (which also respects the folder filter and
+  guards against concurrent rebuilds).
 
 ### Fixed
 - Setup no longer fails silently when launched by double-clicking / "Run with PowerShell" on a
@@ -38,7 +45,7 @@ Initial public release.
   into named systems (`agen_graph_*`).
 - **GitHub tab** — whole-project backup with browser sign-in.
 - **Shared project memory** across both CLIs (`AGENTS.md` + `agen_memory_*`).
-- One-time `install/setup.ps1` build script and full `INSTALL.txt` / `README.md` docs.
+- One-time `install/` build script and full `INSTALL.txt` / `README.md` docs.
 
 ### Security
 - All listeners bind to localhost only; terminal host uses per-session token authentication.

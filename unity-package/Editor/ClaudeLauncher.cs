@@ -90,7 +90,7 @@ namespace AgenLink
             string mcpPath = ResolveMcpServerPath();
             if (mcpPath == null)
                 throw new Exception(
-                    "Could not find mcp-server/build/index.js. Build it (run install/setup.ps1 or `npm run build` " +
+                    "Could not find mcp-server/build/index.js. Build it (run install/setup.cmd or `npm run build` " +
                     "in mcp-server) and/or set the path in Agen-Link ▸ Settings.");
 
             string jsonPath = mcpPath.Replace("\\", "/");

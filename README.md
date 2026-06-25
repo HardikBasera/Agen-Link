@@ -1,25 +1,21 @@
 # Agen-Link
 
-> Run a real AI coding CLI **inside the Unity Editor** — **Claude Code** or Google **Antigravity** — wired to a **live MCP bridge** so the AI can see and act on your open Editor.
+> Run a real AI coding CLI **inside the Unity Editor** — **Claude Code** or **Antigravity** (formerly Google Gemini) — wired to a **live MCP bridge** so the AI can see and act on your open Editor.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/HardikBasera/Agen-Link)](https://github.com/HardikBasera/Agen-Link/releases)
 ![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
 ![Unity 2021.3+](https://img.shields.io/badge/Unity-2021.3%2B-black)
 
-<p align="center">
-  <img src="docs/images/terminal-claude.png" alt="Claude Code running inside a Unity Editor window via Agen-Link" width="560">
-</p>
-
 ## About
 
-**Agen-Link** embeds a real terminal — running either the **Claude Code** CLI or Google's **Antigravity** (`agy`) CLI — directly in a Unity Editor window, and connects it to a **live MCP bridge**. Through that bridge the AI can read and act on your open Editor: Console logs, compile errors, the scene hierarchy, assets, a project knowledge graph, and a one-click scene-optimization auditor. You can also browse your past AI sessions, map your project as a graph, and back the whole project up to GitHub — all without leaving Unity.
+**Agen-Link** embeds a real terminal — running either the **Claude Code** CLI or the **Antigravity** (`agy`; formerly Google Gemini) CLI — directly in a Unity Editor window, and connects it to a **live MCP bridge**. Through that bridge the AI can read and act on your open Editor: Console logs, compile errors, the scene hierarchy, assets, a project knowledge graph, and a one-click scene-optimization auditor. You can also browse your past AI sessions, map your project as a graph, and back the whole project up to GitHub — all without leaving Unity.
 
 Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts that**: *Unity hosts the CLI*, and the MCP server is the AI's window back into the live Editor. You keep your own CLI login, skills, plugins, and slash-commands — the Unity bridge is just added on top.
 
 `Window ▸ Agen-Link` opens a six-tab panel:
 
-- **Terminal** — the embedded AI CLI (Claude or Antigravity). The session **survives script recompiles** (it reconnects and replays).
+- **Terminal** — the embedded AI CLI (Claude or Antigravity, formerly Google Gemini). The session **survives script recompiles** (it reconnects and replays).
 - **Analysis** — one-click scene + asset optimization audit, play-mode performance profiling, and safe, Undo-able auto-fixes.
 - **History** — a read-only browser of your past AI conversations for this project, grouped by date.
 - **Neuron** — a live, Assets-only knowledge graph of your scripts / prefabs / scenes, auto-grouped into named "systems".
@@ -36,7 +32,7 @@ Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts t
 |------|----------------|-----|
 | **Unity 2021.3+** | [unity.com/download](https://unity.com/download) (via Unity Hub) | the editor Agen-Link plugs into |
 | **Node.js 18+** | [nodejs.org](https://nodejs.org) | runs the MCP server and the terminal host |
-| **An AI CLI** (at least one) | see below | the Terminal tab needs Claude and/or Antigravity |
+| **An AI CLI** (at least one) | see below | the Terminal tab needs Claude and/or Antigravity (formerly Google Gemini) |
 
 **AI CLI — install at least one of these:**
 
@@ -46,7 +42,7 @@ Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts t
   ```
   Then run `claude` once and log in.
 
-- **Google Antigravity (`agy`)** — install the Antigravity CLI from
+- **Antigravity (`agy`, formerly Google Gemini)** — install the Antigravity CLI from
   [antigravity.google/docs/cli-install](https://antigravity.google/docs/cli-install), then run `agy`
   once to sign in.
 
@@ -61,7 +57,7 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
 
 ### Part A — one time per PC
 
-1. **Install the requirements above** — Unity, Node 18+, and at least one AI CLI (Claude and/or Antigravity).
+1. **Install the requirements above** — Unity, Node 18+, and at least one AI CLI (Claude and/or Antigravity, formerly Google Gemini).
 
 2. **Download Agen-Link** — clone the repo, or click the green **`Code ▸ Download ZIP`** button above and extract it to a permanent location. (Don't move or rename the folder after setup — the helpers are found by their location.)
 
@@ -75,7 +71,7 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
    1. **Builds the MCP server** — `npm install` then `npm run build` in `mcp-server/`.
    2. **Installs the terminal host** — `npm install` in `pty-host/` (this fetches the native **`node-pty`**).
    3. **Installs the GitHub CLI (`gh`)** via `winget`, *if* it isn't already installed (for the GitHub tab).
-   4. **Checks** whether the optional **Antigravity** CLI is present (it doesn't install it).
+   4. **Checks** whether the optional **Antigravity** (formerly Google Gemini) CLI is present (it doesn't install it).
 
    It only **builds and installs the local helpers** — it never edits your Unity projects and binds nothing to the network. It uses `-ExecutionPolicy Bypass` because Windows blocks scripts downloaded from the internet; that's also why you should run `setup.cmd` and **not** double-click `lib\setup.ps1` directly (that would fail and close instantly).
    </details>
@@ -101,7 +97,7 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
    winget install --id GitHub.cli -e --source winget
    ```
 
-   That's exactly what `setup.cmd` runs. (The Antigravity CLI, if you want it, is installed separately — see **Requirements**.)
+   That's exactly what `setup.cmd` runs. (The Antigravity CLI — formerly Google Gemini — if you want it, is installed separately; see **Requirements**.)
    </details>
 
 ### Part B — in every Unity project
@@ -118,19 +114,28 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
      <img src="docs/images/open-window.png" alt="Opening Agen-Link from Unity's Window menu" width="640">
    </p>
 
-6. **Start a session** — go to the **Terminal** tab and press **Start session**. Pick your CLI (Claude or Antigravity) in the **Settings** tab if needed, then type a prompt. That's it — the AI now sees your live Editor.
+6. **Start a session** — go to the **Terminal** tab and press **Start session**. Pick your CLI (Claude or Antigravity, formerly Google Gemini) in the **Settings** tab if needed, then type a prompt. That's it — the AI now sees your live Editor.
 
 > **Tip:** the native `node-pty` and the MCP server build are machine-specific (and git-ignored), so run `install\setup.cmd` once on each new PC. Step 4 (add the package) is repeated per Unity project.
 
 ## The tabs
 
-### Terminal — Claude or Antigravity, inside Unity
+### Terminal — Claude or Antigravity (formerly Google Gemini), inside Unity
 
-The real CLI, in an Editor window, with the Unity bridge wired in. Sessions survive script recompiles (domain reloads) — they reconnect and replay automatically. Switch between Claude and Antigravity in **Settings**; both share the same project memory.
+The real CLI, in an Editor window, with the Unity bridge wired in. Sessions survive script recompiles (domain reloads) — they reconnect and replay automatically. Switch between Claude and Antigravity (formerly Google Gemini) in **Settings**; both share the same project memory.
 
-<p align="center">
-  <img src="docs/images/terminal-antigravity.png" alt="The Terminal tab running Google's Antigravity (agy) CLI" width="640">
-</p>
+<div align="center">
+<table>
+<tr>
+  <td align="center"><b>Claude Code</b></td>
+  <td align="center"><b>Antigravity <sub>(formerly Google Gemini)</sub></b></td>
+</tr>
+<tr>
+  <td valign="top"><img src="docs/images/terminal-claude.png" alt="The Terminal tab running Claude Code inside Unity" width="430"></td>
+  <td valign="top"><img src="docs/images/terminal-antigravity.png" alt="The Terminal tab running Antigravity (formerly Google Gemini) inside Unity" width="430"></td>
+</tr>
+</table>
+</div>
 
 ### Analysis — one-click scene & asset optimization
 
@@ -158,7 +163,7 @@ Sign in through your browser (no passwords typed into Unity), link or create a r
 
 ### Settings — CLI, font, and the localhost bridge
 
-Choose the CLI (Claude / Antigravity), set the terminal font size, and see the bridge status. The bridge listens on **`127.0.0.1`** only.
+Choose the CLI (Claude / Antigravity, formerly Google Gemini), set the terminal font size, and see the bridge status. The bridge listens on **`127.0.0.1`** only.
 
 <p align="center">
   <img src="docs/images/settings.png" alt="The Settings tab showing the CLI picker and the localhost bridge on 127.0.0.1:6577" width="640">
@@ -196,7 +201,7 @@ Agen-Link runs on your machine and is designed to stay local:
 - **Localhost only.** The Editor bridge (`127.0.0.1:6577`) and the terminal host (an ephemeral
   `127.0.0.1` port) never bind to a network-facing interface. **Don't reconfigure the bridge to
   `0.0.0.0`** — that would expose the live Editor to your network without authentication.
-- **The CLI keeps your access.** The terminal runs the *real* Claude / Antigravity CLI with your
+- **The CLI keeps your access.** The terminal runs the *real* Claude / Antigravity (formerly Google Gemini) CLI with your
   own login; the bridge only **adds** live-editor awareness, it doesn't sandbox the CLI. If your
   CLI account or machine is compromised, so is the bridge.
 - **One write-capable tool.** Most `agen_*` tools are read-only. `agen_apply_fixes` applies

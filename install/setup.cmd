@@ -10,7 +10,7 @@ setlocal
 set "AGENLINK_LAUNCHER=1"
 echo Starting Agen-Link setup. This downloads npm packages, so it needs internet.
 echo.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0lib\setup.ps1"
 set "RC=%ERRORLEVEL%"
 echo.
 if "%RC%"=="0" echo Setup finished successfully. You can close this window.

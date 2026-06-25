@@ -6,7 +6,7 @@
   flags and keeps the window open so you can read the result.
 
   Or run from a terminal:
-      powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\setup.ps1"
+      powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\lib\setup.ps1"
 
   If Windows refuses to run this ("...cannot be loaded because running scripts is
   disabled" / "is not digitally signed"), that is the download block (execution
@@ -18,7 +18,7 @@
 $ErrorActionPreference = 'Stop'
 
 try {
-    $root = Split-Path $PSScriptRoot -Parent          # repo root (parent of install/)
+    $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent   # repo root (install/lib -> install -> root)
     $mcp  = Join-Path $root 'mcp-server'
     $pty  = Join-Path $root 'pty-host'
 

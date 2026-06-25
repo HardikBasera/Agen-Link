@@ -45,7 +45,7 @@ The package also pulls in **Newtonsoft.Json** (`com.unity.nuget.newtonsoft-json`
    - **Easiest:** double-click **`install\setup.cmd`**.
    - **Or from a terminal:**
      ```powershell
-     powershell -ExecutionPolicy Bypass -File "path\to\Agen-Link\install\setup.ps1"
+     powershell -ExecutionPolicy Bypass -File "path\to\Agen-Link\install\lib\setup.ps1"
      ```
    > Don't double-click `setup.ps1` directly — Windows blocks scripts downloaded from the internet
    > and the window closes before you can read the error. `setup.cmd` and the `-ExecutionPolicy
@@ -58,7 +58,7 @@ See **INSTALL.txt** for the full step-by-step guide (including letting the CLI i
 prerequisites for you).
 
 > **Note:** the native `node-pty` and the MCP server build are machine-specific and gitignored — run
-> `install/setup.ps1` after cloning (and don't move/rename the folder afterward; helpers are found
+> `install/setup.cmd` after cloning (and don't move/rename the folder afterward; helpers are found
 > relative to `unity-package/`).
 
 ## How it works
@@ -108,9 +108,9 @@ public issue for security problems.
 ## Troubleshooting
 
 - **"Failed to start on port 6577"** → another Editor may hold the port; change it in **Settings ▸ Bridge server**.
-- **Terminal: "pty-host is not built"** → run `install/setup.ps1` (installs `node-pty`), then restart Unity.
-- **"MCP server not found"** → run `install/setup.ps1` (or `npm run build` in `mcp-server/`); set the path in Settings.
-- **GitHub: `gh` not found** → run `install/setup.ps1`, then restart Unity so it picks up the new PATH.
+- **Terminal: "pty-host is not built"** → run `install/setup.cmd` (installs `node-pty`), then restart Unity.
+- **"MCP server not found"** → run `install/setup.cmd` (or `npm run build` in `mcp-server/`); set the path in Settings.
+- **GitHub: `gh` not found** → run `install/setup.cmd`, then restart Unity so it picks up the new PATH.
 
 ## Layout
 
@@ -118,7 +118,7 @@ public issue for security problems.
 unity-package/   Unity package (Editor C#): bridge, window, Terminal, Analysis, History, GitHub, Neuron graph
 pty-host/        Node terminal host (Windows ConPTY) for the embedded Terminal
 mcp-server/      Node / TypeScript MCP server (src/ → build/)
-install/         setup.ps1 (one-time build + gh install)
+install/         setup.cmd (double-click) + lib/setup.ps1 (the build script it runs)
 ```
 
 ## Contributing

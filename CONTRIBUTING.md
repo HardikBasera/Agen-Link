@@ -33,7 +33,7 @@ terminal) the **Claude Code** and/or **Antigravity** CLI. See `INSTALL.txt` for 
 
 ```powershell
 # One-time build of both Node helpers (installs deps, rebuilds native node-pty, builds mcp-server)
-powershell -ExecutionPolicy Bypass -File "install\setup.ps1"
+powershell -ExecutionPolicy Bypass -File "install\lib\setup.ps1"
 ```
 
 To test inside Unity: `Window ▸ Package Manager ▸ + ▸ Add package from disk…` →

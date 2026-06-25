@@ -71,7 +71,7 @@ body:
     attributes:
       label: Before submitting
       options:
-        - label: I ran `install/setup.ps1` and did not move/rename the folder afterward.
+        - label: I ran `install/setup.cmd` and did not move/rename the folder afterward.
           required: true
         - label: I searched existing issues and this isn't a duplicate.
           required: true

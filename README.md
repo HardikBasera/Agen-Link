@@ -11,7 +11,9 @@
 
 **Agen-Link** embeds a real terminal — running either the **Claude Code** CLI or the **Antigravity** (`agy`; formerly Google Gemini) CLI — directly in a Unity Editor window, and connects it to a **live MCP bridge**. Through that bridge the AI can read and act on your open Editor: Console logs, compile errors, the scene hierarchy, assets, a project knowledge graph, and a one-click scene-optimization auditor. You can also browse your past AI sessions, map your project as a graph, and back the whole project up to GitHub — all without leaving Unity.
 
-Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts that**: *Unity hosts the CLI*, and the MCP server is the AI's window back into the live Editor. You keep your own CLI login, skills, plugins, and slash-commands — the Unity bridge is just added on top.
+Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts that**: *Unity hosts the CLI*, and the MCP server is the AI's window back into the live Editor.
+
+> **It's your real CLI — you keep everything.** Agen-Link launches the *actual* Claude Code or Antigravity CLI, not a stripped-down copy. Your login / subscription, skills, plugins, slash-commands, and config all work exactly as they do in a normal terminal — so you lose no features and your workflow doesn't change. Agen-Link only **adds** the live Unity connection on top. If you already use the CLI outside Unity, you use it the same way here.
 
 `Window ▸ Agen-Link` opens a six-tab panel:
 

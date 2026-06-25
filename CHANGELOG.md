@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-26
+
 ### Added
 - `install/setup.cmd` — a double-clickable launcher for the one-time setup. It runs the build
   script with `-ExecutionPolicy Bypass` (so the Windows "downloaded from the internet" script
@@ -18,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the redundant `Window/Agen-Link/Rebuild Neuron Graph` menu item; rebuilding the Neuron
   graph lives on the Neuron tab's **⟳ Rebuild** button (which also respects the folder filter and
   guards against concurrent rebuilds).
+- Overhauled the **README** for the public landing page (About / Requirements / Install, with
+  in-Editor screenshots and side-by-side Claude / Antigravity terminals) and clarified **INSTALL.txt**.
 
 ### Fixed
 - Setup no longer fails silently when launched by double-clicking / "Run with PowerShell" on a
@@ -50,5 +54,6 @@ Initial public release.
 ### Security
 - All listeners bind to localhost only; terminal host uses per-session token authentication.
 
-[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/HardikBasera/Agen-Link/releases/tag/v0.1.0

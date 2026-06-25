@@ -1,9 +1,13 @@
 {
   "name": "agen-link-pty-host",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "Apache-2.0",
   "main": "index.js",
-  "scripts": { "test": "node --test test/" },
-  "dependencies": { "node-pty": "^1.0.0" }
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0"
+  }
 }

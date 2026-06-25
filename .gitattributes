@@ -1,0 +1,4 @@
+# Windows batch launchers must use CRLF so cmd.exe parses them correctly,
+# including from a GitHub source ZIP. Leave everything else to Git's defaults.
+*.cmd text eol=crlf
+*.bat text eol=crlf

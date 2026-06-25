@@ -22,7 +22,8 @@ In this folder:
   unity-package/   -> the part you add to Unity
   mcp-server/      -> helper program (built once by the setup script)
   pty-host/        -> terminal helper (built once by the setup script)
-  install/setup.ps1-> the one-time build/setup script
+  install/setup.cmd-> double-click this to run the one-time setup
+  install/setup.ps1-> the setup script itself (setup.cmd runs it)
   README.md        -> full documentation
 
 This build targets WINDOWS 10/11.
@@ -114,7 +115,12 @@ In PowerShell, from inside this folder:
        winget install -e --id GitHub.cli
        winget install -e --id Unity.UnityHub
 
-2. Build the helpers (MCP server + Terminal pty-host) and confirm gh:
+2. Build the helpers (MCP server + Terminal pty-host) and confirm gh.
+
+   EASIEST: double-click  install\setup.cmd  (in File Explorer). It runs the setup
+   with the right flags and keeps the window open so you can read the result.
+
+   Or run it yourself from a terminal:
 
        powershell -ExecutionPolicy Bypass -File ".\install\setup.ps1"
 
@@ -122,6 +128,11 @@ In PowerShell, from inside this folder:
        powershell -ExecutionPolicy Bypass -File "C:\path\to\Agen-Link\install\setup.ps1"
 
    Wait until it prints "Done." It downloads npm packages, so it needs internet.
+
+   DO NOT just double-click setup.ps1 (or right-click > Run with PowerShell) on a
+   fresh download: Windows blocks internet-downloaded scripts ("...cannot be loaded"
+   / "is not digitally signed") and the window closes instantly. setup.cmd and the
+   -ExecutionPolicy Bypass command above both get past that block.
 
 NOTE: Do NOT move or rename the Agen-Link folder after setup. The tool finds the
 helper programs by looking next to the unity-package folder.

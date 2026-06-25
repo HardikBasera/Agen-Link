@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `install/setup.cmd` — a double-clickable launcher for the one-time setup. It runs `setup.ps1`
+  with `-ExecutionPolicy Bypass` (so the Windows "downloaded from the internet" script block can't
+  stop it) and keeps the window open so the result is readable.
+
+### Fixed
+- Setup no longer fails silently when launched by double-clicking / "Run with PowerShell" on a
+  freshly downloaded `setup.ps1`: the script now reports errors clearly and pauses instead of
+  closing the window instantly. `*.cmd`/`*.bat` are forced to CRLF via `.gitattributes` so the
+  source ZIP runs correctly.
+
 ## [0.1.0] - 2026-06-24
 
 Initial public release.

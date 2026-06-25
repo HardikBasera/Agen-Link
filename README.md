@@ -40,10 +40,16 @@ The package also pulls in **Newtonsoft.Json** (`com.unity.nuget.newtonsoft-json`
 
 ## Install
 
-1. Clone this repo, then run the one-time setup (builds the MCP server + terminal host, installs `gh`):
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File "path\to\Agen-Link\install\setup.ps1"
-   ```
+1. Clone this repo (or download the ZIP and extract it), then run the one-time setup (builds the
+   MCP server + terminal host, installs `gh`):
+   - **Easiest:** double-click **`install\setup.cmd`**.
+   - **Or from a terminal:**
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File "path\to\Agen-Link\install\setup.ps1"
+     ```
+   > Don't double-click `setup.ps1` directly — Windows blocks scripts downloaded from the internet
+   > and the window closes before you can read the error. `setup.cmd` and the `-ExecutionPolicy
+   > Bypass` command above both get past that block.
 2. In your Unity project: `Window ▸ Package Manager ▸ + ▸ Add package from disk…` and pick
    `path\to\Agen-Link\unity-package\package.json`.
 3. Open `Window ▸ Agen-Link`. The Console should log `[Agen-Link] Listening on 127.0.0.1:6577`.

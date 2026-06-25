@@ -1,19 +1,27 @@
 ============================================================
  AGEN-LINK - INSTALL GUIDE  (Windows)
- Run an AI CLI (Claude or Google Antigravity) inside the Unity Editor.
+ Run an AI CLI (Claude, or Antigravity - formerly Google Gemini) inside the Unity Editor.
 ============================================================
 
 WHAT THIS IS
 ------------
-A Unity tool. It puts a real terminal running the "claude" CLI inside a window
-in the Unity Editor, right next to your project. You type prompts; Claude writes
-and edits the C# scripts in your open project, reads your Console / compile
-errors to fix code, maps your project as a knowledge graph, keeps a local undo
-history, and can back the whole project up to GitHub.
+A Unity tool. It puts a real terminal - running your AI coding CLI (Claude Code,
+or Google Antigravity, formerly Google Gemini) - inside a window in the Unity
+Editor, right next to your project. You type prompts; the AI writes and edits the
+C# scripts in your open project, reads your Console / compile errors to fix code,
+audits and optimizes your scene, maps your project as a knowledge graph, keeps a
+local history, and can back the whole project up to GitHub.
+
+IT'S YOUR REAL CLI - YOU KEEP EVERYTHING. Agen-Link runs the actual Claude or
+Antigravity CLI, not a stripped-down copy. Your login, skills, plugins,
+slash-commands and config all work exactly as they do in a normal terminal - so
+you lose no features and you work the same way you already do outside Unity.
+Agen-Link only adds a live link to your open Editor on top.
 
 The Agen-Link window has these tabs:
-  Terminal  -> the embedded "claude" CLI (the main surface)
-  History   -> browse past Claude conversations for this project
+  Terminal  -> the embedded AI CLI - Claude or Antigravity (the main surface)
+  Analysis  -> one-click scene + asset optimization audit, with safe auto-fixes
+  History   -> browse your past AI conversations for this project
   GitHub    -> one-click whole-project backup (browser sign-in)
   Neuron    -> a live knowledge graph of your project
   Settings  -> CLI (Claude or Antigravity), font size, bridge port, MCP/agy paths
@@ -67,8 +75,8 @@ Claude CLI itself.
    The first time you run "claude" it opens a browser to log in. You need an
    active Claude plan. Once you see the claude prompt, type /exit for now.
 
-3. (Optional) To also run Google's Antigravity agent in the terminal, install the
-   Antigravity CLI (agy) and sign in:
+3. (Optional) To also run Google's Antigravity agent (formerly Google Gemini) in
+   the terminal, install the Antigravity CLI (agy) and sign in:
 
        Install from  https://antigravity.google/docs/cli-install
        agy           (sign in once, then exit)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -70,6 +71,16 @@ namespace AgenLink
             {
                 return Error(id, e.Message);
             }
+        }
+
+        /// <summary>
+        /// Async entry point used by the bridge. Almost every command is synchronous and finishes on the
+        /// calling main-thread frame, so it is wrapped in an already-completed Task. Commands that must span
+        /// multiple editor frames return a Task that completes later without blocking the main thread.
+        /// </summary>
+        public static Task<string> DispatchAsync(string line)
+        {
+            return Task.FromResult(Dispatch(line));
         }
 
         public static string Error(string id, string message)

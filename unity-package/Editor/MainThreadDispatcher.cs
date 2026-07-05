@@ -66,5 +66,31 @@ namespace AgenLink
             EditorWake.Nudge(); // a parked/backgrounded editor won't drain this on its own
             return tcs.Task;
         }
+
+        /// <summary>
+        /// Like <see cref="RunAsync{T}"/> but for work that is itself asynchronous — the function is invoked
+        /// on the main thread and may return a Task that completes on a *later* editor frame (e.g. a
+        /// background compile). The main thread is not blocked while that inner task is pending; only the
+        /// caller awaiting the returned Task waits. The inner task's completion is bridged to the returned one.
+        /// </summary>
+        public static Task<T> RunAsyncTask<T>(Func<Task<T>> func)
+        {
+            var tcs = new TaskCompletionSource<T>();
+            Queue.Enqueue(() =>
+            {
+                try
+                {
+                    func().ContinueWith(t =>
+                    {
+                        if (t.IsFaulted) tcs.SetException(t.Exception.InnerExceptions);
+                        else if (t.IsCanceled) tcs.SetCanceled();
+                        else tcs.SetResult(t.Result);
+                    }, TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception e) { tcs.SetException(e); }
+            });
+            EditorWake.Nudge(); // a parked/backgrounded editor won't drain this on its own
+            return tcs.Task;
+        }
     }
 }

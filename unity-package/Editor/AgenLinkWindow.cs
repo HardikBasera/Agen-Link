@@ -143,6 +143,22 @@ namespace AgenLink
             EditorGUILayout.LabelField("status: " + _termStatus, EditorStyles.miniLabel, GUILayout.Width(180));
             EditorGUILayout.EndHorizontal();
 
+            // Loud warning when the CLI has (or will have) no agen_* tools. Without them the CLI can't see or
+            // edit the Editor and quietly falls back to asking the user / writing scripts — so make it visible.
+            string mcpIssue = LaunchDiagnostics.McpFailure;
+            if (string.IsNullOrEmpty(mcpIssue) && ConfigBuilder.ResolveMcpServerPath() == null)
+                mcpIssue = "mcp-server/build/index.js was not found.";
+            if (!string.IsNullOrEmpty(mcpIssue))
+            {
+                EditorGUILayout.HelpBox(
+                    "Unity tools NOT loaded — the CLI is running without the agen_* tools, so it cannot see or " +
+                    "edit the Editor and will fall back to asking you / writing scripts. (" + mcpIssue + ") " +
+                    "Run install/setup.cmd (or `npm run build` in mcp-server), then Restart the session.",
+                    MessageType.Error);
+                if (GUILayout.Button("Open Settings", GUILayout.Width(120)))
+                    _tab = System.Array.IndexOf(Tabs, "Settings");
+            }
+
             if (PtyHostLauncher.ResolvePtyHostEntry() == null)
             {
                 EditorGUILayout.HelpBox("pty-host is not built. Run install/setup.cmd (installs node-pty), then restart Unity.", MessageType.Warning);

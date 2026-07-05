@@ -127,13 +127,13 @@ namespace AgenLink
         /// HOME-level <c>~/.gemini/config/mcp_config.json</c> (project-local config is unreliable). We merge
         /// our `agenlink` server in, preserving any other servers, and rewrite it on each Start so the port /
         /// project root stay current. agy auto-loads the project's AGENTS.md natively, so no context wiring is
-        /// needed here. No-op (returns) if the MCP server isn't built — agy still launches, just without Unity
-        /// awareness.
+        /// needed here. Returns false (without wiring anything) if the MCP server isn't built — agy still
+        /// launches, just without Unity awareness — so the caller can surface that loudly; true on success.
         /// </summary>
-        public static void WriteAntigravityMcpConfig()
+        public static bool WriteAntigravityMcpConfig()
         {
             string mcpPath = ResolveMcpServerPath();
-            if (mcpPath == null) return;
+            if (mcpPath == null) return false;
 
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             // agy kept its Gemini-CLI predecessor's ".gemini" directory — this path is correct, don't "fix" it.
@@ -164,6 +164,7 @@ namespace AgenLink
             };
 
             File.WriteAllText(cfgPath, cfg.ToString(Newtonsoft.Json.Formatting.Indented), new UTF8Encoding(false));
+            return true;
         }
 
         /// <summary>

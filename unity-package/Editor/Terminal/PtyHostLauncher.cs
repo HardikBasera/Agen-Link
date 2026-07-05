@@ -67,7 +67,14 @@ namespace AgenLink.Terminal
                 if (BridgeSettings.TerminalCli == "antigravity")
                 {
                     cmd = AntigravityCli.ResolveExe();
-                    try { ConfigBuilder.WriteAntigravityMcpConfig(); } catch { /* bridge optional — agy still runs */ }
+                    // Bridge is optional — agy still runs without it — but a missing/failed config means zero
+                    // agen_* tools, so surface it loudly instead of swallowing it (mirrors the Claude path).
+                    try
+                    {
+                        if (ConfigBuilder.WriteAntigravityMcpConfig()) LaunchDiagnostics.McpFailure = null;
+                        else TerminalConfigBuilder.ReportMcpFailure("mcp-server/build/index.js was not found.");
+                    }
+                    catch (Exception e) { TerminalConfigBuilder.ReportMcpFailure(e.Message); }
                     args.AddRange(TerminalConfigBuilder.BuildAntigravityArgs());
                 }
                 else

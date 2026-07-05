@@ -445,6 +445,31 @@ export const tools = [
         },
         run: (port, a) => agenLinkRequest(port, "capture_screenshot", { view: a.view ?? "game", width: a.width ?? 1280, height: a.height ?? 720 }),
     },
+    {
+        name: "agen_run_tests",
+        description: "Run Unity tests through the Test Runner. action:'start' with mode EditMode|PlayMode and an optional " +
+            "testFilter (a test/class/namespace name), then poll {action:'status'} until finished:true — PlayMode " +
+            "runs reload the domain, the bridge drops and reconnects, so just keep polling — then {action:'report'} " +
+            "for per-test results. Requires the Unity Test Framework package to be installed.",
+        schema: {
+            action: z.enum(["start", "status", "report"]).describe("Start a run, poll status, or fetch the report."),
+            mode: z.enum(["EditMode", "PlayMode"]).optional().describe("Test mode for 'start' (default EditMode)."),
+            testFilter: z.string().optional().describe("For 'start': only tests matching this name/class/namespace."),
+        },
+        run: (port, a) => agenLinkRequest(port, "run_tests", { action: a.action, mode: a.mode ?? "EditMode", testFilter: a.testFilter ?? "" }),
+    },
+    {
+        name: "agen_execute_code",
+        description: "Compile and run a short C# snippet inside the Editor immediately (no script files, no domain reload) — " +
+            "the LAST RESORT for editor operations no other agen_ tool covers. The snippet runs as statements with " +
+            "UnityEngine/UnityEditor/System.Linq available; leading 'using' lines are honored; end with 'return " +
+            "<value>;' to send data back; Debug.Log output is captured. DISABLED by default: on a 'disabled' error, " +
+            "ask the user to enable 'Allow code execution' in the Agen-Link ▸ Settings tab, then retry.",
+        schema: {
+            code: z.string().describe("C# statements to execute; end with 'return <value>;' to return data."),
+        },
+        run: (port, a) => agenLinkRequest(port, "execute_code", { code: a.code }, 20000),
+    },
 ];
 // Shared project-memory tools (filesystem-backed; bridge-independent). Both CLIs get them.
 tools.push(...memoryTools);

@@ -1,7 +1,10 @@
 {
   "name": "AgenLink.Editor",
   "rootNamespace": "AgenLink",
-  "references": [],
+  "references": [
+    "UnityEditor.TestRunner",
+    "UnityEngine.TestRunner"
+  ],
   "includePlatforms": [
     "Editor"
   ],
@@ -11,6 +14,12 @@
   "precompiledReferences": [],
   "autoReferenced": true,
   "defineConstraints": [],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.test-framework",
+      "expression": "1.0.0",
+      "define": "AGENLINK_HAS_TESTFRAMEWORK"
+    }
+  ],
   "noEngineReferences": false
 }

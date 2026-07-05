@@ -81,6 +81,9 @@ namespace AgenLink
             public string view;         // capture_screenshot: game|scene
             public int width;           // capture_screenshot
             public int height;          // capture_screenshot
+            public string mode;         // run_tests: EditMode|PlayMode
+            public string testFilter;   // run_tests: test/class/namespace name
+            public string code;         // execute_code: C# snippet
         }
 
         public static string Dispatch(string line)
@@ -109,6 +112,23 @@ namespace AgenLink
         /// </summary>
         public static Task<string> DispatchAsync(string line)
         {
+            // execute_code compiles on a background pass and completes on a later editor frame — return its
+            // Task wrapped in the response envelope, without blocking the main thread meanwhile.
+            RequestEnvelope req = null;
+            try { req = JsonUtility.FromJson<RequestEnvelope>(line); } catch { /* fall through to sync path */ }
+            if (req != null && req.command == "execute_code")
+            {
+                string id = req.id;
+                var p = req.@params ?? new RequestParams();
+                Task<string> exec;
+                try { exec = Ops.CodeExecutor.ExecuteAsync(p.code ?? ""); }
+                catch (Exception e) { return Task.FromResult(Error(id, e.Message)); }
+                return exec.ContinueWith(t =>
+                    t.IsFaulted
+                        ? Error(id, t.Exception?.GetBaseException().Message ?? "execute_code failed")
+                        : new JObj().S("id", id).B("ok", true).Raw("data", t.Result).Build(),
+                    TaskContinuationOptions.ExecuteSynchronously);
+            }
             return Task.FromResult(Dispatch(line));
         }
 
@@ -167,6 +187,8 @@ namespace AgenLink
                 case "playmode": return Ops.EditorOps.PlayMode(p);
                 case "set_selection": return Ops.EditorOps.SetSelection(p);
                 case "capture_screenshot": return Ops.ScreenshotOps.Capture(p);
+                case "run_tests": return Ops.TestRunnerOps.Handle(p);
+                // execute_code is async and handled in DispatchAsync, never reaches here.
                 default: throw new Exception($"Unknown command: {command}");
             }
         }

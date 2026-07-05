@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-06
+
+### Added
+- **Editor-control tools** so the CLI drives Unity through first-class tools instead of writing and
+  compiling throwaway editor scripts, and checks the Editor instead of asking the user:
+  - GameObjects — `agen_create_gameobject` (empty/primitive/prefab/copy), `agen_modify_gameobject`
+    (rename/reparent/active/tag/layer/static/transform), `agen_delete_gameobjects`,
+    `agen_find_gameobjects` (name/path/component/tag), `agen_get_gameobject` (full serialized
+    component data).
+  - Components — `agen_manage_component` (add/remove) and `agen_set_component_properties`, a
+    SerializedProperty-first setter (Inspector-accurate, Undo-able) with a reflection fallback,
+    handling Vector/Color/Quaternion/enum/object-reference/array/nested-struct values.
+  - Scenes — `agen_manage_scene` (save/open/create; dirty-guarded, play-mode aware).
+  - Assets — `agen_manage_asset` (GUID-safe move/copy/delete, create prefab from a scene object,
+    create material).
+  - Editor — `agen_execute_menu_item`, `agen_playmode`, `agen_set_selection`.
+  - `agen_capture_screenshot` — Game/Scene view to a PNG the CLI reads back.
+  - `agen_run_tests` — Test Runner (EditMode/PlayMode) via start → poll → report.
+  - `agen_execute_code` — compile & run a C# snippet in the Editor (OFF by default; enable in
+    Settings ▸ "Allow code execution").
+- Scene-reads now return **instanceIDs** for unambiguous targeting: `agen_get_scene_hierarchy`
+  gains instanceID + path per node, and `agen_get_project_info` gains a loaded-scenes list.
+- A strong tool-use system prompt (`--append-system-prompt`, capability-sniffed) plus rewritten
+  `AGENTS.md` hard rules that steer the CLI to use tools over scripts/questions.
+
+### Changed
+- Tool descriptions rewritten to cross-route and to prefer querying the Editor over asking the user.
+- The bridge client retries transient connect failures during domain-reload rebinds, so a tool
+  call landing mid-reload rides it out instead of erroring.
+
+### Fixed
+- A missing/unbuilt MCP server no longer starts the CLI silently without tools: the Terminal tab
+  shows a loud banner and the console logs an error (both the Claude and Antigravity launch paths).
+
 ## [0.1.1] - 2026-06-26
 
 ### Added

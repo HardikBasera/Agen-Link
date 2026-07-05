@@ -9,6 +9,10 @@ using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
+// AssemblyBuilder is marked obsolete in newer Unity but is still functional; agen_execute_code is a
+// gated, off-by-default last-resort tool, so we keep using it and silence the deprecation warning here.
+#pragma warning disable 618
+
 namespace AgenLink.Ops
 {
     /// <summary>
@@ -110,7 +114,7 @@ namespace AgenLink.Ops
             Application.logMessageReceived += cb;
             try
             {
-                Assembly asm = Assembly.Load(File.ReadAllBytes(dll));
+                System.Reflection.Assembly asm = System.Reflection.Assembly.Load(File.ReadAllBytes(dll));
                 Type t = asm.GetType(className);
                 MethodInfo run = t.GetMethod("Run", BindingFlags.Public | BindingFlags.Static);
                 object ret;

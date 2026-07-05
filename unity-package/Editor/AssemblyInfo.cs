@@ -7,3 +7,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AgenLink.Editor.GitHub.Tests")]
 [assembly: InternalsVisibleTo("AgenLink.Editor.Neuron.Tests")]
 [assembly: InternalsVisibleTo("AgenLink.Editor.Analysis.Tests")]
+[assembly: InternalsVisibleTo("AgenLink.Editor.Ops.Tests")]

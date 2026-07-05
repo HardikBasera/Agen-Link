@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace AgenLink.Terminal
 {
@@ -12,22 +14,40 @@ namespace AgenLink.Terminal
             // ConfigBuilder.WriteMcpConfigTemp() writes %TEMP%\agenlink-mcp.json describing the Unity
             // MCP server. Passing it via --mcp-config ADDS it to the user's configured servers (additive
             // by default; not --strict-mcp-config), so their own servers/skills/login all still apply.
-            // If the MCP server isn't built/found, launch claude anyway (just without live Unity awareness)
-            // rather than failing the whole session — WriteMcpConfigTemp throws when it can't resolve.
+            // If the MCP server isn't built/found we launch claude anyway (rather than failing the whole
+            // session) — but LOUDLY: without this config the CLI has zero agen_* tools and silently falls
+            // back to asking the user / writing editor scripts, so we surface the failure to the Terminal tab.
             try
             {
-                if (ConfigBuilder.ResolveMcpServerPath() != null)
+                string mcp = ConfigBuilder.ResolveMcpServerPath() != null
+                    ? ConfigBuilder.WriteMcpConfigTemp()
+                    : null;
+                if (!string.IsNullOrEmpty(mcp))
                 {
-                    string mcp = ConfigBuilder.WriteMcpConfigTemp();
-                    if (!string.IsNullOrEmpty(mcp))
-                    {
-                        args.Add("--mcp-config");
-                        args.Add(mcp);
-                    }
+                    args.Add("--mcp-config");
+                    args.Add(mcp);
+                    LaunchDiagnostics.McpFailure = null;
+                }
+                else
+                {
+                    ReportMcpFailure("mcp-server/build/index.js was not found.");
                 }
             }
-            catch { /* MCP server unavailable — proceed without it */ }
+            catch (Exception e)
+            {
+                ReportMcpFailure(e.Message);
+            }
             return args;
+        }
+
+        internal static void ReportMcpFailure(string reason)
+        {
+            LaunchDiagnostics.McpFailure = reason;
+            Debug.LogError(
+                "[Agen-Link] Unity tools NOT loaded — the CLI is starting without the agen_* MCP tools (" +
+                reason + "). It cannot see or edit the Editor and will fall back to asking you / writing " +
+                "scripts. Run install\\setup.cmd (or `npm run build` in mcp-server), or set the path in " +
+                "Agen-Link ▸ Settings, then Restart the session.");
         }
 
         /// <summary>Antigravity's Unity bridge is configured via ~/.gemini/config/mcp_config.json

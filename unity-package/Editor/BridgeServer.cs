@@ -126,8 +126,10 @@ namespace AgenLink
                         string response;
                         try
                         {
-                            // Hop to the main thread to touch Unity APIs, then block this socket thread for the result.
-                            response = MainThreadDispatcher.RunAsync(() => CommandHandlers.Dispatch(line))
+                            // Hop to the main thread to touch Unity APIs, then block this socket thread for the
+                            // result. DispatchAsync lets a command span multiple editor frames (its Task
+                            // completes on a later frame) without holding up the main thread meanwhile.
+                            response = MainThreadDispatcher.RunAsyncTask(() => CommandHandlers.DispatchAsync(line))
                                                             .GetAwaiter().GetResult();
                         }
                         catch (Exception e)

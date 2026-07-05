@@ -63,6 +63,17 @@ namespace AgenLink
         public JObj N(string k, long v) { Key(k); _sb.Append(v.ToString(CultureInfo.InvariantCulture)); return this; }
         public JObj B(string k, bool v) { Key(k); _sb.Append(v ? "true" : "false"); return this; }
 
+        /// <summary>Add a floating-point value with full round-trip precision. NaN/Infinity have no JSON
+        /// literal, so they serialize as null.</summary>
+        public JObj F(string k, double v)
+        {
+            Key(k);
+            _sb.Append(double.IsNaN(v) || double.IsInfinity(v)
+                ? "null"
+                : v.ToString("R", CultureInfo.InvariantCulture));
+            return this;
+        }
+
         /// <summary>Add a key whose value is already-serialized JSON (object, array, number, etc.).</summary>
         public JObj Raw(string k, string rawJson) { Key(k); _sb.Append(rawJson); return this; }
 

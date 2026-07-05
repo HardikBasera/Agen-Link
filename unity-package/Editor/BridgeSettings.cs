@@ -92,5 +92,13 @@ namespace AgenLink
             get => EditorPrefs.GetString("AgenLink.AntigravityPath", "");
             set => EditorPrefs.SetString("AgenLink.AntigravityPath", value);
         }
+
+        /// <summary>Whether the agen_execute_code tool may compile and run arbitrary C# in the Editor.
+        /// OFF by default — it is a real capability surface. Per-machine (EditorPrefs), not per-project.</summary>
+        public static bool AllowCodeExecution
+        {
+            get => EditorPrefs.GetBool("AgenLink.AllowCodeExec", false);
+            set => EditorPrefs.SetBool("AgenLink.AllowCodeExec", value);
+        }
     }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEditor;
 using UnityEngine;
 
 namespace AgenLink.Terminal
@@ -8,6 +10,17 @@ namespace AgenLink.Terminal
     /// the Unity MCP server added on top). No restrictive --settings here — this is a full interactive session.</summary>
     internal static class TerminalConfigBuilder
     {
+        // Strong, short steering that outranks the model's default "ask the user / write a script" habits.
+        // Added via --append-system-prompt (not --system-prompt) so it augments, never replaces, the CLI's own.
+        private const string SystemPrompt =
+            "You are connected to a LIVE Unity Editor via agen_* MCP tools that read AND modify it. Rules: query " +
+            "editor state with tools (agen_get_scene_hierarchy, agen_find_gameobjects, agen_get_gameobject, " +
+            "agen_read_console) instead of asking the user; perform editor operations with tools " +
+            "(agen_create_gameobject, agen_set_component_properties, agen_manage_scene, agen_playmode) instead of " +
+            "writing editor scripts; call agen_get_gameobject before setting properties; after editing .cs run " +
+            "agen_refresh_assets then poll agen_get_compile_errors; after play-mode changes the bridge reconnects " +
+            "within seconds — retry, don't abandon tools; scene edits are unsaved — ask before saving.";
+
         public static List<string> BuildClaudeArgs()
         {
             var args = new List<string>();
@@ -27,6 +40,12 @@ namespace AgenLink.Terminal
                     args.Add("--mcp-config");
                     args.Add(mcp);
                     LaunchDiagnostics.McpFailure = null;
+                    // Only steer the model toward the tools when the tools are actually wired up.
+                    if (SupportsAppendSystemPrompt())
+                    {
+                        args.Add("--append-system-prompt");
+                        args.Add(SystemPrompt);
+                    }
                 }
                 else
                 {
@@ -38,6 +57,40 @@ namespace AgenLink.Terminal
                 ReportMcpFailure(e.Message);
             }
             return args;
+        }
+
+        /// <summary>Whether the installed claude CLI accepts --append-system-prompt. Old CLIs abort on an
+        /// unknown flag, so we sniff `claude --help` once and cache the answer for the session.</summary>
+        private static bool SupportsAppendSystemPrompt()
+        {
+            const string key = "AgenLink.Claude.AppendSysPrompt";
+            string cached = SessionState.GetString(key, "");
+            if (cached == "1") return true;
+            if (cached == "0") return false;
+
+            bool supported = false;
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = ClaudeCli.ResolveExe(),
+                    Arguments = "--help",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using (var proc = Process.Start(psi))
+                {
+                    string help = proc.StandardOutput.ReadToEnd() + proc.StandardError.ReadToEnd();
+                    if (!proc.WaitForExit(4000)) { try { proc.Kill(); } catch { /* ignore */ } }
+                    supported = help.Contains("--append-system-prompt");
+                }
+            }
+            catch { supported = false; }
+
+            SessionState.SetString(key, supported ? "1" : "0");
+            return supported;
         }
 
         internal static void ReportMcpFailure(string reason)

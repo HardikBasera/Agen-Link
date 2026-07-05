@@ -176,11 +176,17 @@ Choose the CLI (Claude / Antigravity, formerly Google Gemini), set the terminal 
 Three processes keep the AI session alive across Unity's domain reloads (recompiles):
 
 - A tiny **TCP bridge** (`127.0.0.1:6577`) runs inside the Editor and executes every request on the
-  main thread. The **Node MCP server** connects to it and exposes live-editor tools to the CLI:
-  `agen_get_project_info`, `agen_read_console`, `agen_get_compile_errors`, `agen_refresh_assets`,
-  `agen_get_scene_hierarchy`, `agen_get_selection`, `agen_find_assets`, the scene-analysis tools
-  (`agen_audit_scene`, `agen_audit_assets`, `agen_perf_*`, `agen_apply_fixes`), the Neuron graph
-  tools (`agen_graph_*`), and shared project-memory tools (`agen_memory_*`).
+  main thread. The **Node MCP server** connects to it and exposes editor tools to the CLI:
+  - **Read** — `agen_get_project_info`, `agen_read_console`, `agen_get_compile_errors`,
+    `agen_get_scene_hierarchy`, `agen_find_gameobjects`, `agen_get_gameobject`, `agen_get_selection`,
+    `agen_find_assets`.
+  - **Edit** — create / modify / delete / find GameObjects, add-remove components and set their
+    serialized properties, save/open/create scenes, move/create assets, prefabs and materials, run
+    menu items, control play mode, set the selection, and capture Game/Scene-view screenshots.
+  - **Run** — `agen_refresh_assets`, `agen_run_tests`, and (off by default) `agen_execute_code`.
+  - Plus the scene-analysis tools (`agen_audit_scene`, `agen_audit_assets`, `agen_perf_*`,
+    `agen_apply_fixes`), the Neuron graph tools (`agen_graph_*`), and shared project-memory tools
+    (`agen_memory_*`).
 - The **Terminal** launches the CLI through a detached **pty-host** (Node + Windows ConPTY) that the
   Editor talks to over a localhost socket. It authenticates with a per-session token, replays a ring
   buffer on reconnect, and watches the parent Editor PID — so the session survives recompiles and is
@@ -206,9 +212,11 @@ Agen-Link runs on your machine and is designed to stay local:
 - **The CLI keeps your access.** The terminal runs the *real* Claude / Antigravity (formerly Google Gemini) CLI with your
   own login; the bridge only **adds** live-editor awareness, it doesn't sandbox the CLI. If your
   CLI account or machine is compromised, so is the bridge.
-- **One write-capable tool.** Most `agen_*` tools are read-only. `agen_apply_fixes` applies
-  whitelisted scene/asset fixes — review audit findings first. Scene edits are Undo-able and not
-  auto-saved; asset-import edits reimport immediately.
+- **Write tools, backed by Undo.** The `agen_*` tools can edit the scene, objects, components and
+  assets. Every scene edit is Undo-able and **never auto-saved** (you review, then save); asset and
+  prefab/material operations are permanent (deletes go to the OS trash). `agen_execute_code` (compile
+  & run arbitrary C# in the Editor) is **disabled by default** — enable it per-session in
+  Settings ▸ "Allow code execution" only when you need it.
 - **Don't log secrets.** The bridge can read the Unity Console — keep API keys/tokens out of it,
   in git-ignored config loaded at runtime.
 

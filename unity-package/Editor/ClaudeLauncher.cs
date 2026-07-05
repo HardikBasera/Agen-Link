@@ -181,6 +181,8 @@ namespace AgenLink
 
             string agents = Path.Combine(root, "AGENTS.md");
             if (!File.Exists(agents)) File.WriteAllText(agents, BuildAgentsSeed(), enc);
+            else if (!File.ReadAllText(agents).Contains(RulesMarker))
+                File.AppendAllText(agents, "\n" + BuildRulesBlock(), enc); // non-destructive upgrade for existing projects
 
             EnsureImports(Path.Combine(root, "CLAUDE.md"), enc);
             EnsureImports(Path.Combine(root, "GEMINI.md"), enc);
@@ -218,6 +220,8 @@ namespace AgenLink
             if (add.Length > 0) File.AppendAllText(path, add.ToString(), enc);
         }
 
+        private const string RulesMarker = "<!-- agen-link:rules:v2 -->";
+
         private static string BuildAgentsSeed()
         {
             var rp = GraphicsSettings.currentRenderPipeline;
@@ -231,17 +235,51 @@ namespace AgenLink
             sb.Append("- Unity ").Append(Application.unityVersion).Append('\n');
             sb.Append("- Product: ").Append(Application.productName).Append('\n');
             sb.Append("- Render pipeline: ").Append(rpName).Append("\n\n");
-            sb.Append("## How to work here\n\n");
+            sb.Append(BuildRulesBlock());
+            sb.Append("\n## Memory & optimization\n\n");
             sb.Append("- BEFORE scanning the project, call `agen_memory_search` to reuse what the other CLI already learned.\n");
-            sb.Append("- Use the `agen_*` MCP tools for live editor state (project info, console, compile errors, scene, assets, code graph).\n");
             sb.Append("- When you learn something durable (an architecture decision, a gotcha, where a system lives),\n");
             sb.Append("  record it with `agen_memory_append` so the other CLI inherits it.\n");
-            sb.Append("- After editing C# scripts: `agen_refresh_assets`, then poll `agen_get_compile_errors` and fix any errors.\n");
-            sb.Append("- Scene optimization: run `agen_audit_scene` + `agen_audit_assets` (structured findings), then\n");
+            sb.Append("- Scene optimization loop: `agen_audit_scene` + `agen_audit_assets` (structured findings), then\n");
             sb.Append("  `agen_perf_start` -> poll `agen_perf_status` -> `agen_perf_report` for play-mode numbers. Report\n");
             sb.Append("  findings to the user, apply agreed fixes via `agen_apply_fixes` (scene fixes are Undo-able and\n");
             sb.Append("  unsaved — the user reviews and saves), then RE-RUN audit+profile and show before/after numbers.\n\n");
             sb.Append("## Notes\n\n(Durable project notes accumulate here and in the shared memory store.)\n");
+            return sb.ToString();
+        }
+
+        /// <summary>The hard tool-use rules, marked so an existing AGENTS.md can be upgraded in place once.</summary>
+        private static string BuildRulesBlock()
+        {
+            var sb = new StringBuilder();
+            sb.Append(RulesMarker).Append('\n');
+            sb.Append("## HARD RULES — you control a LIVE Unity Editor\n\n");
+            sb.Append("The agen_* MCP tools read AND change the running Unity Editor directly. Follow these rules:\n\n");
+            sb.Append("1. NEVER ask the user about editor state a tool can answer. Scene contents ->\n");
+            sb.Append("   agen_get_scene_hierarchy / agen_find_gameobjects. One object's details -> agen_get_gameobject.\n");
+            sb.Append("   Errors -> agen_read_console + agen_get_compile_errors. Project/scenes/play state -> agen_get_project_info.\n");
+            sb.Append("2. NEVER write a C# editor script (or a one-off MenuItem) for an operation a tool covers:\n");
+            sb.Append("   creating/modifying/deleting GameObjects, components and their properties, scenes, prefabs,\n");
+            sb.Append("   materials, asset moves, menu items, play mode, selection, tests, screenshots.\n");
+            sb.Append("   Write .cs files ONLY for gameplay/runtime code the project actually needs.\n");
+            sb.Append("3. Discovery before mutation: call agen_get_gameobject first and echo back the exact property\n");
+            sb.Append("   paths it returns to agen_set_component_properties.\n");
+            sb.Append("4. After creating/editing .cs files: agen_refresh_assets -> poll agen_get_compile_errors until\n");
+            sb.Append("   isCompiling=false and errorCount=0. Fix errors before continuing.\n");
+            sb.Append("5. agen_playmode play/stop (and anything causing a domain reload) drops the bridge for a few\n");
+            sb.Append("   seconds. Poll agen_playmode {action:\"status\"} until it responds. Retry tools — do not fall\n");
+            sb.Append("   back to scripts or questions because one call failed.\n");
+            sb.Append("6. Tool edits to scenes are Undo-able and NOT saved. Say what changed; call\n");
+            sb.Append("   agen_manage_scene {action:\"save\"} only when the user agrees. Asset operations are permanent.\n");
+            sb.Append("7. Target objects by instanceID (every read tool returns them); hierarchy path \"Parent/Child\"\n");
+            sb.Append("   is the fallback. Verify visual results with agen_capture_screenshot and read the PNG yourself.\n\n");
+            sb.Append("## Tool cheat sheet\n\n");
+            sb.Append("READ  : get_project_info · read_console · get_compile_errors · get_scene_hierarchy ·\n");
+            sb.Append("        find_gameobjects · get_gameobject · get_selection · find_assets · graph_* · audit_* · perf_*\n");
+            sb.Append("WRITE : create_gameobject · modify_gameobject · delete_gameobjects · manage_component ·\n");
+            sb.Append("        set_component_properties · manage_scene · manage_asset · execute_menu_item · playmode ·\n");
+            sb.Append("        set_selection · run_tests · capture_screenshot · apply_fixes · refresh_assets ·\n");
+            sb.Append("        execute_code (only if enabled in Settings)\n");
             return sb.ToString();
         }
     }

@@ -583,10 +583,21 @@ namespace AgenLink
             EditorGUILayout.LabelField("Auto-detected from %LOCALAPPDATA%\\agy. Set only if agy isn't found.", EditorStyles.miniLabel);
 
             EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("Code execution", EditorStyles.boldLabel);
+            BridgeSettings.AllowCodeExecution = EditorGUILayout.ToggleLeft(
+                "Allow code execution (agen_execute_code)", BridgeSettings.AllowCodeExecution);
+            if (BridgeSettings.AllowCodeExecution)
+                EditorGUILayout.HelpBox("The CLI can compile and run arbitrary C# inside this Editor. Only enable this for " +
+                                        "sessions you trust. Turn it off when you're done.", MessageType.Warning);
+            else
+                EditorGUILayout.LabelField("Off: agen_execute_code returns a 'disabled' error. Enable only when you need it.",
+                                           EditorStyles.miniLabel);
+
+            EditorGUILayout.Space(8);
             EditorGUILayout.HelpBox("The Terminal tab runs your selected CLI (Claude or Antigravity) with your own config, " +
                                     "skills and plugins. The bridge + MCP server above let it read live editor state " +
-                                    "(console, compile errors, scene), edit files, and share project memory across both " +
-                                    "CLIs (agen_memory_* tools + a local AGENTS.md).", MessageType.Info);
+                                    "(console, compile errors, scene), edit the scene/objects/assets, edit files, and share " +
+                                    "project memory across both CLIs (agen_memory_* tools + a local AGENTS.md).", MessageType.Info);
 
             EditorGUILayout.EndScrollView();
         }

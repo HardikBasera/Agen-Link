@@ -96,7 +96,7 @@ namespace AgenLink.Terminal
         internal static void ReportMcpFailure(string reason)
         {
             LaunchDiagnostics.McpFailure = reason;
-            Debug.LogError(
+            UnityEngine.Debug.LogError(
                 "[Agen-Link] Unity tools NOT loaded — the CLI is starting without the agen_* MCP tools (" +
                 reason + "). It cannot see or edit the Editor and will fall back to asking you / writing " +
                 "scripts. Run install\\setup.cmd (or `npm run build` in mcp-server), or set the path in " +

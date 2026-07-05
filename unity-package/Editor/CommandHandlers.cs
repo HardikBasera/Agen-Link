@@ -25,13 +25,16 @@ namespace AgenLink
             public RequestParams @params;
         }
 
+        // Internal (not private) so the Ops.* handlers can receive it directly. JsonUtility-parsed: flat
+        // primitives and primitive arrays only. Commands whose params nest (component properties, per-field
+        // presence) bypass this and parse the raw line with Newtonsoft — see DispatchData.
         [Serializable]
-        private class RequestParams
+        internal class RequestParams
         {
             public string type;      // read_console: all|error|warning|log
-            public int max;          // read_console / find_assets cap
+            public int max;          // read_console / find_assets / find_gameobjects cap
             public string query;     // find_assets query (e.g. "t:MonoScript")
-            public int maxDepth;     // get_scene_hierarchy depth
+            public int maxDepth;     // get_scene_hierarchy / get_gameobject depth
 
             // graph_query
             public string entity;    // focus: id | guid | path | type full name | display/short name
@@ -49,6 +52,35 @@ namespace AgenLink
             public int frames;          // perf_start: frames to sample
             public bool enterPlayMode;  // perf_start: enter play mode if not playing
             public bool exitPlayMode;   // perf_start: leave play mode when done
+
+            // ---- editor-control ops (v0.2) ----
+            public string action;       // manage_component | manage_scene | playmode
+            public string target;       // get_gameobject | manage_component (single object ref)
+            public string[] targets;    // delete_gameobjects | set_selection
+            public string name;         // create_gameobject
+            public string primitive;    // create_gameobject: cube|sphere|capsule|cylinder|plane|quad
+            public string prefab;       // create_gameobject: prefab asset path or GUID
+            public string copyFrom;     // create_gameobject: duplicate this object
+            public string parent;       // create_gameobject parent ref ("" = scene root)
+            public float[] position;    // create_gameobject
+            public float[] rotation;    // create_gameobject (euler)
+            public float[] scale;       // create_gameobject
+            public bool worldSpace;     // create_gameobject transform space
+            public string gname;        // find_gameobjects: name substring
+            public string gpath;        // find_gameobjects: exact hierarchy path
+            public string component;    // find_gameobjects: component type filter
+            public string tag;          // find_gameobjects: tag filter
+            public bool includeProperties; // get_gameobject
+            public string componentType;   // manage_component
+            public int index;              // manage_component: nth component of that type
+            public string path;         // manage_scene: scene asset path
+            public bool additive;       // manage_scene: open/create additively
+            public bool force;          // manage_scene: discard unsaved changes
+            public string menuPath;     // execute_menu_item
+            public bool ping;           // set_selection: ping the first object
+            public string view;         // capture_screenshot: game|scene
+            public int width;           // capture_screenshot
+            public int height;          // capture_screenshot
         }
 
         public static string Dispatch(string line)
@@ -61,10 +93,7 @@ namespace AgenLink
                     return Error(req?.id, "Missing or invalid command");
                 id = req.id;
                 var p = req.@params ?? new RequestParams();
-                // apply_fixes carries a nested object array JsonUtility can't parse — hand it the raw line.
-                string data = req.command == "apply_fixes"
-                    ? Analysis.FixApplier.Apply(line)
-                    : Handle(req.command, p);
+                string data = DispatchData(req.command, p, line);
                 return new JObj().S("id", id).B("ok", true).Raw("data", data).Build();
             }
             catch (Exception e)
@@ -86,6 +115,23 @@ namespace AgenLink
         public static string Error(string id, string message)
         {
             return new JObj().S("id", id).B("ok", false).S("error", message).Build();
+        }
+
+        /// <summary>
+        /// Routes to a handler. Commands whose params are too nested for JsonUtility (a fixes array, a
+        /// component-property map, per-field presence semantics) get the raw request line and parse it with
+        /// Newtonsoft; everything else uses the flat JsonUtility-parsed RequestParams.
+        /// </summary>
+        private static string DispatchData(string command, RequestParams p, string line)
+        {
+            switch (command)
+            {
+                case "apply_fixes": return Analysis.FixApplier.Apply(line);
+                case "modify_gameobject": return Ops.GameObjectOps.Modify(line);
+                case "set_component_properties": return Ops.PropertyEngine.Set(line);
+                case "manage_asset": return Ops.AssetOps.Handle(line);
+                default: return Handle(command, p);
+            }
         }
 
         private static string Handle(string command, RequestParams p)
@@ -110,6 +156,17 @@ namespace AgenLink
                 case "perf_start": return Analysis.PerfRecorder.Start(p.frames, p.enterPlayMode, p.exitPlayMode);
                 case "perf_status": return Analysis.PerfRecorder.Status();
                 case "perf_report": return Analysis.PerfRecorder.Report();
+                // ---- editor-control ops (v0.2); nested-param commands are routed in DispatchData ----
+                case "create_gameobject": return Ops.GameObjectOps.Create(p);
+                case "delete_gameobjects": return Ops.GameObjectOps.Delete(p);
+                case "find_gameobjects": return Ops.GameObjectOps.Find(p);
+                case "get_gameobject": return Ops.GameObjectOps.Get(p);
+                case "manage_component": return Ops.ComponentOps.Manage(p);
+                case "manage_scene": return Ops.SceneOps.Manage(p);
+                case "execute_menu_item": return Ops.EditorOps.MenuItem(p);
+                case "playmode": return Ops.EditorOps.PlayMode(p);
+                case "set_selection": return Ops.EditorOps.SetSelection(p);
+                case "capture_screenshot": return Ops.ScreenshotOps.Capture(p);
                 default: throw new Exception($"Unknown command: {command}");
             }
         }
@@ -125,6 +182,7 @@ namespace AgenLink
                 .S("platform", EditorUserBuildSettings.activeBuildTarget.ToString())
                 .S("renderPipeline", rp != null ? rp.GetType().Name : "Built-in Render Pipeline")
                 .S("activeScene", SceneManager.GetActiveScene().path)
+                .Raw("scenes", Ops.SceneOps.ScenesJson())
                 .B("isPlaying", EditorApplication.isPlaying)
                 .B("isCompiling", EditorApplication.isCompiling)
                 .Build();
@@ -219,7 +277,9 @@ namespace AgenLink
             }
 
             return new JObj()
+                .N("instanceID", go.GetInstanceID())
                 .S("name", go.name)
+                .S("path", Ops.ObjectResolver.PathOf(go.transform))
                 .B("activeSelf", go.activeSelf)
                 .N("childCount", go.transform.childCount)
                 .Raw("components", Json.Arr(compNames))

@@ -39,15 +39,49 @@ namespace AgenLink.Ops
                 if (found == null && shortMatches.Count == 1) found = shortMatches[0];
                 else if (found == null && shortMatches.Count > 1)
                 {
-                    var names = new List<string>();
-                    for (int i = 0; i < shortMatches.Count && i < 6; i++) names.Add(shortMatches[i].FullName);
-                    throw new Exception($"type '{name}' is ambiguous ({shortMatches.Count} matches: " +
-                                        $"{string.Join(", ", names)}). Use the full name including namespace.");
+                    // Multiple types share this short name (e.g. "Transform" also lives in
+                    // UnityEngine.Rendering.RadeonRays and log4net.Util). Prefer the canonical Unity
+                    // type over third-party collisions; only throw if the top preference is itself tied.
+                    found = PreferCanonical(shortMatches);
+                    if (found == null)
+                    {
+                        var names = new List<string>();
+                        for (int i = 0; i < shortMatches.Count && i < 6; i++) names.Add(shortMatches[i].FullName);
+                        throw new Exception($"type '{name}' is ambiguous ({shortMatches.Count} matches: " +
+                                            $"{string.Join(", ", names)}). Use the full name including namespace.");
+                    }
                 }
             }
 
             Cache[name] = found; // cache misses too (null) — repeated bad names shouldn't re-scan every assembly
             return found;
+        }
+
+        // Pick the single best-ranked type among short-name collisions, or null if two share the top
+        // rank (genuinely ambiguous — let the caller throw). Canonical Unity types win over third-party
+        // ones that merely reuse the name.
+        private static Type PreferCanonical(List<Type> matches)
+        {
+            Type best = null;
+            int bestRank = int.MaxValue, bestCount = 0;
+            foreach (Type t in matches)
+            {
+                int r = NamespaceRank(t);
+                if (r < bestRank) { bestRank = r; best = t; bestCount = 1; }
+                else if (r == bestRank) bestCount++;
+            }
+            return bestCount == 1 ? best : null;
+        }
+
+        // 0 = core UnityEngine (Transform, Rigidbody, ...); 1 = any other Unity engine/editor namespace
+        // (UnityEngine.UI, UnityEngine.Rendering.*, UnityEditor.*); 2 = everything else (project + 3rd party).
+        private static int NamespaceRank(Type t)
+        {
+            string ns = t.Namespace ?? "";
+            if (ns == "UnityEngine") return 0;
+            if (ns.StartsWith("UnityEngine.", StringComparison.Ordinal) ||
+                ns == "UnityEditor" || ns.StartsWith("UnityEditor.", StringComparison.Ordinal)) return 1;
+            return 2;
         }
 
         /// <summary>Resolve a name that must be a concrete Component subtype (for add/get/set). Throws otherwise.</summary>

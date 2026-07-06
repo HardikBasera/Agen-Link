@@ -131,6 +131,13 @@ namespace AgenLink
 
         private void DrawTerminal()
         {
+            // Terminal owns the keyboard while its tab is focused: tell Unity's ShortcutManager a
+            // text field is being edited, so editor shortcuts (F = frame selected, W/E/R = gizmos,
+            // Shift+Space = maximize) don't fire from keystrokes meant for the CLI. IMGUI resets this
+            // flag every frame, so it stays scoped to just this tab while the window is focused.
+            if (focusedWindow == this)
+                EditorGUIUtility.editingTextField = true;
+
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             bool alive = PtyHostLauncher.HostAlive() && _termClient != null && _termClient.Connected;
             using (new EditorGUI.DisabledScope(alive))
@@ -175,6 +182,26 @@ namespace AgenLink
             EnsureTerminalObjects();
             var rect = GUILayoutUtility.GetRect(100, 4000, 100, 4000, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             _termView.OnGUI(rect);
+
+            // Draw the focus sink AFTER the terminal: _termView.OnGUI already consumed (e.Use) every
+            // key it handles, so this off-screen text field never receives them — it exists only to
+            // hold keyboard focus so Unity's ShortcutManager treats us as "editing a text field" and
+            // suppresses editor shortcuts (F=frame, W/E/R=gizmos, Shift+Space=maximize).
+            KeepKeyboardCaptured();
+        }
+
+        // The Terminal tab owns the keyboard. Unity only yields its editor shortcuts to a window when
+        // a real text field owns focus and is being edited (EditorGUIUtility.editingTextField alone
+        // does not gate the modern ShortcutManager), so we park a 1x1 text field off-screen and keep
+        // it focused while this window is the focused one. Zero visual/layout footprint.
+        private const string TermFocusSink = "AgenLinkTerminalFocusSink";
+        private void KeepKeyboardCaptured()
+        {
+            if (focusedWindow != this) return;
+            GUI.SetNextControlName(TermFocusSink);
+            GUI.TextField(new Rect(-100, -100, 1, 1), "");
+            if (GUI.GetNameOfFocusedControl() != TermFocusSink)
+                GUI.FocusControl(TermFocusSink);
         }
 
         private void StartTerminal()

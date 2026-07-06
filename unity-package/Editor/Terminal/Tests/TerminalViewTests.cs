@@ -55,11 +55,73 @@ public class TerminalViewTests
         Assert.AreEqual("\x1bV", TerminalView.MapKey(altShiftV), "Alt+Shift+V = ESC V (uppercase)");
 
         var altB = new Event { type = EventType.KeyDown, keyCode = KeyCode.B, modifiers = EventModifiers.Alt };
-        Assert.AreEqual("\x1bb", TerminalView.MapKey(altB), "Alt+B = ESC b (readline back-word)");
+        // NB: write ESC + "b" as two literals — "\x1bb" would greedily parse as the single char U+01BB
+        // (C# \x consumes up to 4 hex digits, and 'b' is one), not ESC followed by 'b'.
+        Assert.AreEqual("\x1b" + "b", TerminalView.MapKey(altB), "Alt+B = ESC b (readline back-word)");
 
         // AltGr (Ctrl+Alt) must NOT be hijacked into a meta sequence — it composes characters, so it
         // falls through to the printable branch and yields the composed character ('v'), not ESC v.
         var altGrV = new Event { type = EventType.KeyDown, keyCode = KeyCode.V, character = 'v', modifiers = EventModifiers.Alt | EventModifiers.Control };
         Assert.AreEqual("v", TerminalView.MapKey(altGrV), "AltGr (Ctrl+Alt) must compose its character, not emit a meta sequence");
+    }
+
+    // Ctrl+Backspace must delete the previous word. \x17 is unix-word-rubout (what Ctrl+W sends),
+    // the universal "delete word back" that shells and readline apps honor. Alt+Backspace sends
+    // the readline backward-kill-word sequence (\x1b\x7f). Plain Backspace stays DEL.
+    [Test]
+    public void MapKey_Backspace_Variants()
+    {
+        var bs = new Event { type = EventType.KeyDown, keyCode = KeyCode.Backspace };
+        Assert.AreEqual("\x7f", TerminalView.MapKey(bs), "plain Backspace = DEL");
+
+        var ctrlBs = new Event { type = EventType.KeyDown, keyCode = KeyCode.Backspace, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x17", TerminalView.MapKey(ctrlBs), "Ctrl+Backspace = delete word (Ctrl+W byte)");
+
+        var altBs = new Event { type = EventType.KeyDown, keyCode = KeyCode.Backspace, modifiers = EventModifiers.Alt };
+        Assert.AreEqual("\x1b\x7f", TerminalView.MapKey(altBs), "Alt+Backspace = readline backward-kill-word");
+    }
+
+    // Bare arrows/Home/End keep their legacy form; modified ones use the xterm CSI 1;<mod><final>
+    // form (Ctrl -> mod 5, Alt -> mod 3, Shift -> mod 2). This is what enables word-jump in the CLI.
+    [Test]
+    public void MapKey_CursorKeys_ModifierEncoding()
+    {
+        var left = new Event { type = EventType.KeyDown, keyCode = KeyCode.LeftArrow };
+        Assert.AreEqual("\x1b[D", TerminalView.MapKey(left), "bare Left unchanged");
+
+        var ctrlLeft = new Event { type = EventType.KeyDown, keyCode = KeyCode.LeftArrow, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5D", TerminalView.MapKey(ctrlLeft), "Ctrl+Left = word-left");
+
+        var ctrlRight = new Event { type = EventType.KeyDown, keyCode = KeyCode.RightArrow, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5C", TerminalView.MapKey(ctrlRight), "Ctrl+Right = word-right");
+
+        var ctrlUp = new Event { type = EventType.KeyDown, keyCode = KeyCode.UpArrow, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5A", TerminalView.MapKey(ctrlUp), "Ctrl+Up");
+
+        var ctrlDown = new Event { type = EventType.KeyDown, keyCode = KeyCode.DownArrow, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5B", TerminalView.MapKey(ctrlDown), "Ctrl+Down");
+
+        var altLeft = new Event { type = EventType.KeyDown, keyCode = KeyCode.LeftArrow, modifiers = EventModifiers.Alt };
+        Assert.AreEqual("\x1b[1;3D", TerminalView.MapKey(altLeft), "Alt+Left = mod 3");
+
+        var ctrlHome = new Event { type = EventType.KeyDown, keyCode = KeyCode.Home, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5H", TerminalView.MapKey(ctrlHome), "Ctrl+Home");
+
+        var ctrlEnd = new Event { type = EventType.KeyDown, keyCode = KeyCode.End, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[1;5F", TerminalView.MapKey(ctrlEnd), "Ctrl+End");
+    }
+
+    // Bare Delete/PageUp/PageDown keep their legacy tilde form; modified ones use CSI <n>;<mod>~.
+    [Test]
+    public void MapKey_TildeKeys_ModifierEncoding()
+    {
+        var del = new Event { type = EventType.KeyDown, keyCode = KeyCode.Delete };
+        Assert.AreEqual("\x1b[3~", TerminalView.MapKey(del), "bare Delete unchanged");
+
+        var ctrlDel = new Event { type = EventType.KeyDown, keyCode = KeyCode.Delete, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[3;5~", TerminalView.MapKey(ctrlDel), "Ctrl+Delete = delete word forward");
+
+        var ctrlPgUp = new Event { type = EventType.KeyDown, keyCode = KeyCode.PageUp, modifiers = EventModifiers.Control };
+        Assert.AreEqual("\x1b[5;5~", TerminalView.MapKey(ctrlPgUp), "Ctrl+PageUp");
     }
 }

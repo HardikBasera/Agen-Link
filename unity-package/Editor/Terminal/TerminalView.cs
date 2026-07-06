@@ -206,21 +206,36 @@ namespace AgenLink.Terminal
 
         internal static string MapKey(Event e)
         {
+            // xterm modifier parameter: 1 + shift + 2*alt + 4*ctrl. >1 means a modified key,
+            // which uses the parameterized CSI form (e.g. Ctrl+Left = ESC[1;5D).
+            int mod = 1 + (e.shift ? 1 : 0) + (e.alt ? 2 : 0) + (e.control ? 4 : 0);
+
             switch (e.keyCode)
             {
                 case KeyCode.Return: case KeyCode.KeypadEnter: return "\r";
-                case KeyCode.Backspace: return "\x7f";
+
+                // Backspace: plain = DEL; Ctrl = delete-word-back (Ctrl+W byte, unix-word-rubout);
+                // Alt = readline backward-kill-word (ESC DEL). Ctrl wins if both are held.
+                case KeyCode.Backspace:
+                    if (e.control) return "\x17";
+                    if (e.alt)     return "\x1b\x7f";
+                    return "\x7f";
+
                 case KeyCode.Tab: return e.shift ? "\x1b[Z" : "\t";   // Shift+Tab = back-tab (CSI Z)
                 case KeyCode.Escape: return "\x1b";
-                case KeyCode.UpArrow: return "\x1b[A";
-                case KeyCode.DownArrow: return "\x1b[B";
-                case KeyCode.RightArrow: return "\x1b[C";
-                case KeyCode.LeftArrow: return "\x1b[D";
-                case KeyCode.Home: return "\x1b[H";
-                case KeyCode.End: return "\x1b[F";
-                case KeyCode.PageUp: return "\x1b[5~";
-                case KeyCode.PageDown: return "\x1b[6~";
-                case KeyCode.Delete: return "\x1b[3~";
+
+                // Cursor / edit-nav keys: modified -> ESC[1;<mod><final>, else the bare form.
+                case KeyCode.UpArrow:    return CursorKey('A', mod);
+                case KeyCode.DownArrow:  return CursorKey('B', mod);
+                case KeyCode.RightArrow: return CursorKey('C', mod);
+                case KeyCode.LeftArrow:  return CursorKey('D', mod);
+                case KeyCode.Home:       return CursorKey('H', mod);
+                case KeyCode.End:        return CursorKey('F', mod);
+
+                // Tilde keys: modified -> ESC[<n>;<mod>~, else ESC[<n>~.
+                case KeyCode.PageUp:   return TildeKey(5, mod);
+                case KeyCode.PageDown: return TildeKey(6, mod);
+                case KeyCode.Delete:   return TildeKey(3, mod);
             }
             // Alt/Meta+letter -> ESC-prefixed byte ("meta sends escape", as xterm/cmd/PowerShell do).
             // Alt+V (ESC v) is the keystroke the Claude CLI listens for to read a clipboard image itself;
@@ -241,6 +256,14 @@ namespace AgenLink.Terminal
                 return e.character.ToString();
             return null;
         }
+
+        // ESC[1;<mod><final> for a modified cursor/nav key; the bare ESC[<final> form when unmodified.
+        private static string CursorKey(char final, int mod)
+            => mod > 1 ? "\x1b[1;" + mod + final : "\x1b[" + final;
+
+        // ESC[<n>;<mod>~ for a modified tilde key; the bare ESC[<n>~ form when unmodified.
+        private static string TildeKey(int n, int mod)
+            => mod > 1 ? "\x1b[" + n + ";" + mod + "~" : "\x1b[" + n + "~";
 
         private void HandleWheel(Event e, Rect area)
         {
@@ -273,7 +296,11 @@ namespace AgenLink.Terminal
         private void HandleMouseDown(Event e, Rect area)
         {
             if (e.button != 0 || !area.Contains(e.mousePosition)) return;
-            GUIUtility.keyboardControl = 0; // ensure no other IMGUI control swallows our keys
+            // NOTE: we deliberately do NOT zero GUIUtility.keyboardControl here. HandleEvents reads
+            // Event.current directly (independent of focus), so nothing "swallows" our keys — but the
+            // window keeps an off-screen text field focused (AgenLinkWindow.KeepKeyboardCaptured) so
+            // Unity's ShortcutManager stays suppressed; zeroing focus here would re-enable editor
+            // shortcuts (F=frame, Shift+Space=maximize) for a frame after every click.
             PointToCell(e.mousePosition, area, out int line, out int col);
             _selStartLine = _selEndLine = line; _selStartCol = _selEndCol = col;
             _selecting = true; _hasSelection = false;

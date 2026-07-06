@@ -43,6 +43,16 @@ public class OpsTests
         Assert.AreEqual(typeof(Rigidbody), TypeResolver.Resolve("UnityEngine.Rigidbody"));
     }
 
+    // 'Transform' collides with UnityEngine.Rendering.RadeonRays.Transform and log4net.Util.Transform
+    // when those assemblies are loaded, so a naive short-name scan finds 3 matches. Resolve must prefer
+    // the canonical UnityEngine component instead of throwing "ambiguous" — it's the most common
+    // component of all, and add/get/set_component would otherwise break per-project.
+    [Test]
+    public void TypeResolver_PrefersUnityEngineForAmbiguousShortName()
+    {
+        Assert.AreEqual(typeof(Transform), TypeResolver.Resolve("Transform"));
+    }
+
     [Test]
     public void TypeResolver_RequireComponentType_RejectsNonComponent()
     {

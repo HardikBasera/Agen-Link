@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-06
+
+### Fixed
+- **Terminal keyboard handling.** <kbd>Ctrl</kbd>+<kbd>Backspace</kbd> deletes a word;
+  <kbd>Alt</kbd>+<kbd>Backspace</kbd> and modifier-encoded arrows / Home / End / Delete / PageUp-Down
+  (<kbd>Ctrl</kbd>+<kbd>←</kbd>/<kbd>→</kbd> word-jump, etc.) now reach the CLI.
+- **Terminal keystrokes no longer trigger Unity editor shortcuts.** Typing in the terminal used to
+  fire Scene-view shortcuts (frame-selected, gizmo keys) and maximize the window
+  (<kbd>Shift</kbd>+<kbd>Space</kbd>). The Terminal tab now captures the keyboard while focused.
+- **`agen_set_component_properties` / `agen_manage_component` / `agen_get_gameobject` on `Transform`
+  (and any other short type name that collides across loaded assemblies).** Resolving the bare name
+  `Transform` no longer fails with `type 'Transform' is ambiguous` when RadeonRays / log4net types are
+  loaded — short names now resolve to the canonical `UnityEngine` type.
+
+### Docs
+- Added `KNOWN_ISSUES.md` listing deferred bugs and limitations (e.g. a deliberate window
+  maximize/restore drops the terminal session; mouse clicks/drags aren't forwarded to the CLI).
+
 ## [0.2.0] - 2026-07-06
 
 ### Added
@@ -88,6 +106,8 @@ Initial public release.
 ### Security
 - All listeners bind to localhost only; terminal host uses per-session token authentication.
 
-[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/HardikBasera/Agen-Link/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/HardikBasera/Agen-Link/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/HardikBasera/Agen-Link/releases/tag/v0.1.0

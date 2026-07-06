@@ -55,7 +55,9 @@ public class TerminalViewTests
         Assert.AreEqual("\x1bV", TerminalView.MapKey(altShiftV), "Alt+Shift+V = ESC V (uppercase)");
 
         var altB = new Event { type = EventType.KeyDown, keyCode = KeyCode.B, modifiers = EventModifiers.Alt };
-        Assert.AreEqual("\x1bb", TerminalView.MapKey(altB), "Alt+B = ESC b (readline back-word)");
+        // NB: write ESC + "b" as two literals — "\x1bb" would greedily parse as the single char U+01BB
+        // (C# \x consumes up to 4 hex digits, and 'b' is one), not ESC followed by 'b'.
+        Assert.AreEqual("\x1b" + "b", TerminalView.MapKey(altB), "Alt+B = ESC b (readline back-word)");
 
         // AltGr (Ctrl+Alt) must NOT be hijacked into a meta sequence — it composes characters, so it
         // falls through to the printable branch and yields the composed character ('v'), not ESC v.

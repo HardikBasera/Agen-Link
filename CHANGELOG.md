@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`agen_playmode` play/stop and `agen_refresh_assets` no longer destroy the reply they are sending.**
+  Each triggers a domain reload, which closes the listener and every client socket — including the one the
+  response still had to travel over — so a call that had actually worked was reported to the caller as a
+  failure. They now answer first and perform the reload a few frames later. The returned `isPlaying` /
+  `isCompiling` are therefore the pre-change values and are documented as such; the tool descriptions tell
+  the caller to poll for the new state.
 ## [0.3.0] - 2026-08-23
 
 ### Added

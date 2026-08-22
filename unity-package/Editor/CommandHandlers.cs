@@ -297,12 +297,24 @@ namespace AgenLink
 
         private static string RefreshAssets()
         {
-            AssetDatabase.Refresh();
-            // Kick a recompile if scripts changed; harmless if nothing is dirty.
-            try { CompilationPipeline.RequestScriptCompilation(); } catch { /* older Unity */ }
+            // Deferred, not inline: if scripts changed this causes a domain reload, which closes the listener
+            // and every client socket — including the one this reply still has to travel over. Running it
+            // inline made a refresh that actually worked look like a failed request. Answer first, reload after.
+            MainThreadDispatcher.RunAfter(0.25, () =>
+            {
+                AssetDatabase.Refresh();
+                // Kick a recompile if scripts changed; harmless if nothing is dirty.
+                try { CompilationPipeline.RequestScriptCompilation(); } catch { /* older Unity */ }
+            });
+
             return new JObj()
-                .S("status", "refresh requested")
+                .S("status", "refresh scheduled")
+                .B("scheduled", true)
                 .B("isCompiling", EditorApplication.isCompiling)
+                .S("note", "Scheduled — this reply was sent BEFORE the refresh so it is not lost to the domain " +
+                           "reload that follows, so isCompiling above is still the OLD value. If scripts changed " +
+                           "the bridge drops for a few seconds and reconnects itself. Poll agen_get_compile_errors " +
+                           "until isCompiling is false, then read errorCount.")
                 .Build();
         }
 

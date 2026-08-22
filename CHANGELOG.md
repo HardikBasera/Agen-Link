@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The MCP bridge could silently stop listening after a domain reload.** The listener was restarted
+  only from `EditorApplication.delayCall`, which needs an editor tick to fire — and an unfocused
+  editor does not tick. A recompile that landed while Unity was in the background left the bridge dead
+  until the next reload that happened to occur with the editor focused, with nothing logged and the
+  earlier "Listening on ..." line still sitting in the Console. The listener now also restarts from
+  `AssemblyReloadEvents.afterAssemblyReload`, which fires as part of the reload itself.
+
 ### Documentation
 - **Documented that `Add package from git URL` is not supported** and why: the Unity package lives
   in `unity-package/` (no root `package.json`), and the Editor resolves the `mcp-server`/`pty-host`

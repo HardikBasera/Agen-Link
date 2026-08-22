@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -43,6 +44,68 @@ namespace AgenLink
         public static string Arr(IEnumerable<string> elements)
         {
             return "[" + string.Join(",", elements) + "]";
+        }
+
+        /// <summary>
+        /// Read a top-level string field out of a compact JSON object with no parser and no Unity API.
+        /// The bridge needs this on its socket thread, where <c>JsonUtility</c> (main-thread only) cannot be
+        /// used — see <see cref="CommandHandlers.TryHandleOffMainThread"/>. Understands backslash escapes.
+        ///
+        /// Deliberately simple: it scans for the key anywhere in the line rather than tracking object depth,
+        /// which is fine for the bridge's own flat envelope ({"id":…,"command":…,"params":{…}}) but is not a
+        /// general-purpose JSON reader. Returns false if the key is absent or its value is not a string.
+        /// </summary>
+        public static bool TryReadStringField(string json, string key, out string value)
+        {
+            value = null;
+            if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(key)) return false;
+
+            string needle = "\"" + key + "\"";
+            int i = 0;
+            while (true)
+            {
+                i = json.IndexOf(needle, i, StringComparison.Ordinal);
+                if (i < 0) return false;
+
+                int j = i + needle.Length;
+                while (j < json.Length && char.IsWhiteSpace(json[j])) j++;
+                if (j >= json.Length || json[j] != ':') { i += needle.Length; continue; } // a value, not a key
+                j++;
+                while (j < json.Length && char.IsWhiteSpace(json[j])) j++;
+                if (j >= json.Length || json[j] != '"') return false;                     // non-string value
+                j++;
+
+                var sb = new StringBuilder();
+                while (j < json.Length)
+                {
+                    char c = json[j];
+                    if (c == '\\')
+                    {
+                        if (j + 1 >= json.Length) return false;
+                        char e = json[j + 1];
+                        switch (e)
+                        {
+                            case 'n': sb.Append('\n'); break;
+                            case 't': sb.Append('\t'); break;
+                            case 'r': sb.Append('\r'); break;
+                            case 'b': sb.Append('\b'); break;
+                            case 'f': sb.Append('\f'); break;
+                            case 'u':
+                                if (j + 5 >= json.Length) return false;
+                                sb.Append((char)Convert.ToInt32(json.Substring(j + 2, 4), 16));
+                                j += 4;
+                                break;
+                            default: sb.Append(e); break;   // \" \\ \/ and anything unrecognised
+                        }
+                        j += 2;
+                        continue;
+                    }
+                    if (c == '"') { value = sb.ToString(); return true; }
+                    sb.Append(c);
+                    j++;
+                }
+                return false;   // unterminated string
+            }
         }
     }
 

@@ -137,6 +137,45 @@ namespace AgenLink
             return new JObj().S("id", id).B("ok", false).S("error", message).Build();
         }
 
+        /// <summary>How long the editor loop may go without a tick before we call the main thread stalled.</summary>
+        internal const int MainThreadStallMs = 2000;
+
+        /// <summary>
+        /// Handle the commands that must answer WITHOUT the main thread, directly on the bridge's socket
+        /// thread. Today that is only "ping". It touches no Unity API, so it still replies while Unity's main
+        /// thread is blocked — which is the whole point: it separates "the bridge is dead" from "Unity is
+        /// busy". Every previous stall was misdiagnosed as the former because nothing could prove the latter.
+        ///
+        /// Returns false for every other command, which then takes the normal main-thread dispatch path.
+        /// </summary>
+        public static bool TryHandleOffMainThread(string line, out string response)
+        {
+            response = null;
+            if (!Json.TryReadStringField(line, "command", out string command) || command != "ping") return false;
+            Json.TryReadStringField(line, "id", out string id);
+
+            long idleMs = MainThreadDispatcher.MsSinceLastPump;
+            bool responsive = idleMs < MainThreadStallMs;
+
+            string data = new JObj()
+                .B("listenerAlive", true)
+                .B("mainThreadResponsive", responsive)
+                .N("mainThreadIdleMs", idleMs)
+                .N("queueDepth", MainThreadDispatcher.QueueDepth)
+                .S("verdict", responsive
+                    ? "Bridge and Unity's main thread are both healthy. A failing command is a problem with " +
+                      "that command, not the connection."
+                    : "The bridge is healthy — this reply came from its socket thread. Unity's main thread is " +
+                      "NOT ticking, so it is blocked (asset import, shader compile, modal dialog or progress " +
+                      "bar) or the editor is parked. Look at the Unity window: a progress bar there names the " +
+                      "operation. Do NOT report this as a bridge failure and do NOT fall back to writing " +
+                      "editor scripts — wait for it to clear and retry.")
+                .Build();
+
+            response = new JObj().S("id", id).B("ok", true).Raw("data", data).Build();
+            return true;
+        }
+
         /// <summary>
         /// Routes to a handler. Commands whose params are too nested for JsonUtility (a fixes array, a
         /// component-property map, per-field presence semantics) get the raw request line and parse it with

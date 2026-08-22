@@ -33,6 +33,34 @@ namespace AgenLink
         public static bool IsRunning => _running;
         public static int ActivePort => _activePort;
 
+        /// <summary>
+        /// How long a socket thread waits for Unity's main thread before giving up. Kept just under the MCP
+        /// client's own per-request timeout so the caller gets our diagnostic message rather than a bare
+        /// client-side timeout. A const, not a setting: BridgeSettings reads EditorPrefs, which is main-thread
+        /// only and therefore unusable from here.
+        /// </summary>
+        private const int MainThreadTimeoutMs = 12000;
+
+        /// <summary>
+        /// Says which half is actually stuck. If the editor loop is still ticking, the command itself is slow;
+        /// if it is not, Unity is blocked or parked and no amount of reconnecting will help.
+        /// </summary>
+        private static string MainThreadTimeoutMessage()
+        {
+            long idleMs = MainThreadDispatcher.MsSinceLastPump;
+            if (idleMs < CommandHandlers.MainThreadStallMs)
+                return $"Agen-Link: this command did not finish within {MainThreadTimeoutMs}ms, but Unity's " +
+                       $"editor loop IS ticking (last tick {idleMs}ms ago, {MainThreadDispatcher.QueueDepth} " +
+                       "queued). The bridge and the Editor are both healthy — this specific command is slow " +
+                       "or stuck. Retry it, or try a narrower request.";
+
+            return $"Agen-Link: Unity's main thread has not ticked for {idleMs}ms, so it is blocked (asset " +
+                   "import, shader compile, modal dialog or progress bar) or the editor is parked. The bridge " +
+                   "itself is fine — call agen_ping to confirm; it answers without the main thread. Clicking " +
+                   "the Editor will NOT help if it is blocked: look at the Unity window, a progress bar there " +
+                   "names the operation. Wait for it to clear and retry — do not switch to writing editor scripts.";
+        }
+
         static BridgeServer()
         {
             // Asset Import Workers (-adb2 -batchMode) and other secondary processes load the editor
@@ -137,13 +165,32 @@ namespace AgenLink
                     {
                         if (line.Length == 0) continue;
                         string response;
+
+                        // Health probe answered right here, on the socket thread, touching no Unity API — so
+                        // it still replies while the main thread is wedged. That is what tells a caller
+                        // "the bridge is alive, Unity is busy" instead of leaving it to guess.
+                        if (CommandHandlers.TryHandleOffMainThread(line, out response))
+                        {
+                            writer.WriteLine(response);
+                            continue;
+                        }
+
                         try
                         {
-                            // Hop to the main thread to touch Unity APIs, then block this socket thread for the
-                            // result. DispatchAsync lets a command span multiple editor frames (its Task
-                            // completes on a later frame) without holding up the main thread meanwhile.
-                            response = MainThreadDispatcher.RunAsyncTask(() => CommandHandlers.DispatchAsync(line))
-                                                            .GetAwaiter().GetResult();
+                            // Hop to the main thread to touch Unity APIs, then wait for the result.
+                            // DispatchAsync lets a command span multiple editor frames (its Task completes on
+                            // a later frame) without holding up the main thread meanwhile.
+                            var task = MainThreadDispatcher.RunAsyncTask(() => CommandHandlers.DispatchAsync(line));
+
+                            // BOUNDED wait. This used to be an unconditional GetResult(), which blocked this
+                            // thread forever whenever the main thread stalled: the socket was never disposed,
+                            // so it sat in CLOSE_WAIT, and every retry leaked another thread and another
+                            // socket. Waiting on the handle (rather than Task.Wait) does not wrap a faulted
+                            // task in an AggregateException, so GetResult below still surfaces the original.
+                            if (((IAsyncResult)task).AsyncWaitHandle.WaitOne(MainThreadTimeoutMs))
+                                response = task.GetAwaiter().GetResult();
+                            else
+                                response = CommandHandlers.Error(null, MainThreadTimeoutMessage());
                         }
                         catch (Exception e)
                         {

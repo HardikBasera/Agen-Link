@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`agen_ping`** — a health probe answered on the bridge socket thread without touching Unity, so it
+  replies even while the Editor is busy. It reports whether the editor loop is ticking, so a timeout can
+  be attributed to the right half instead of guessed at.
+
 ### Fixed
+- **A stalled Unity main thread no longer leaks a thread and a socket per request.** The bridge waited on
+  the main thread with an unbounded `GetResult()`, so any stall (asset import, shader compile, modal
+  dialog) blocked the socket thread forever; the connection was never disposed, sat in `CLOSE_WAIT`, and
+  every retry leaked another. The wait is now bounded and returns a diagnostic that distinguishes "this
+  command is slow" from "Unity's main thread is not ticking".
 - **The MCP bridge could silently stop listening after a domain reload.** The listener was restarted
   only from `EditorApplication.delayCall`, which needs an editor tick to fire — and an unfocused
   editor does not tick. A recompile that landed while Unity was in the background left the bridge dead

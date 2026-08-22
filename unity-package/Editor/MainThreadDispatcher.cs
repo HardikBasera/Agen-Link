@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -20,11 +21,27 @@ namespace AgenLink
     {
         private static readonly ConcurrentQueue<Action> Queue = new ConcurrentQueue<Action>();
 
+        // Stamped every Pump. Read from the bridge's socket thread to tell "the editor loop is ticking"
+        // apart from "it is not" — the single fact that distinguishes a wedged Unity from a dead bridge.
+        private static long _lastPumpTicks = DateTime.UtcNow.Ticks;
+
         static MainThreadDispatcher()
         {
             EditorApplication.update -= Pump;
             EditorApplication.update += Pump;
         }
+
+        /// <summary>
+        /// Milliseconds since <see cref="Pump"/> last ran. Safe from any thread — touches no Unity API.
+        /// Pump runs every editor tick whether or not the queue has work, so a large value means the editor
+        /// loop itself has stopped: the main thread is blocked (asset import, shader compile, modal dialog or
+        /// progress bar) or the editor is parked. It does NOT mean the bridge is down.
+        /// </summary>
+        public static long MsSinceLastPump =>
+            (DateTime.UtcNow.Ticks - Volatile.Read(ref _lastPumpTicks)) / TimeSpan.TicksPerMillisecond;
+
+        /// <summary>Main-thread actions queued but not yet drained. Safe from any thread.</summary>
+        public static int QueueDepth => Queue.Count;
 
         /// <summary>
         /// Drain queued main-thread work. Called from <see cref="EditorApplication.update"/> and, so the
@@ -33,6 +50,8 @@ namespace AgenLink
         /// </summary>
         public static void Pump()
         {
+            Volatile.Write(ref _lastPumpTicks, DateTime.UtcNow.Ticks);
+
             // Bound work per frame so a flood of requests can't stall the editor; the rest run next frame.
             int processed = 0;
             while (processed < 64 && Queue.TryDequeue(out var action))

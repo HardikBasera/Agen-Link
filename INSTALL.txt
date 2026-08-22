@@ -58,7 +58,7 @@ choosing a Unity version and signing in is a graphical step Claude can't do.
 You need Node.js (to run the helpers AND to install the Claude CLI), then the
 Claude CLI itself.
 
-1. Install Node.js 18 or newer. Easiest on Windows - open PowerShell and run:
+1. Install Node.js 20 or newer. Easiest on Windows - open PowerShell and run:
 
        winget install -e --id OpenJS.NodeJS.LTS
 

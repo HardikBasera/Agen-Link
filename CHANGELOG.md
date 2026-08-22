@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Minimum supported Node.js is now 20** (was 18). `@modelcontextprotocol/sdk` 1.30 resolves
+  `@hono/node-server` to 2.x, which declares `engines: node >=20`. CI has only ever tested on
+  Node 20, so 18 was never actually verified.
+
 ## [0.2.1] - 2026-07-06
 
 ### Fixed

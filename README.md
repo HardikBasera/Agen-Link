@@ -33,7 +33,7 @@ Most MCP setups have an **external** chat app drive Unity. Agen-Link **inverts t
 | Tool | How to install | Why |
 |------|----------------|-----|
 | **Unity 2021.3+** | [unity.com/download](https://unity.com/download) (via Unity Hub) | the editor Agen-Link plugs into |
-| **Node.js 18+** | [nodejs.org](https://nodejs.org) | runs the MCP server and the terminal host |
+| **Node.js 20+** | [nodejs.org](https://nodejs.org) | runs the MCP server and the terminal host |
 | **An AI CLI** (at least one) | see below | the Terminal tab needs Claude and/or Antigravity (formerly Google Gemini) |
 
 **AI CLI — install at least one of these:**
@@ -59,7 +59,7 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
 
 ### Part A — one time per PC
 
-1. **Install the requirements above** — Unity, Node 18+, and at least one AI CLI (Claude and/or Antigravity, formerly Google Gemini).
+1. **Install the requirements above** — Unity, Node 20+, and at least one AI CLI (Claude and/or Antigravity, formerly Google Gemini).
 
 2. **Download Agen-Link** — clone the repo, or click the green **`Code ▸ Download ZIP`** button above and extract it to a permanent location. (Don't move or rename the folder after setup — the helpers are found by their location.)
 

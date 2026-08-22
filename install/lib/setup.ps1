@@ -27,8 +27,8 @@ try {
 
     # ---- 1. Build the MCP server -------------------------------------------------
     Write-Host "[1/5] Building the MCP server..." -ForegroundColor Cyan
-    if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js not found. Install Node 18+ first (https://nodejs.org), open a new window, and re-run." }
-    if (-not (Get-Command npm  -ErrorAction SilentlyContinue)) { throw "npm not found. Install Node 18+ (it includes npm), open a new window, and re-run." }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js not found. Install Node 20+ first (https://nodejs.org), open a new window, and re-run." }
+    if (-not (Get-Command npm  -ErrorAction SilentlyContinue)) { throw "npm not found. Install Node 20+ (it includes npm), open a new window, and re-run." }
 
     Push-Location $mcp
     try {
@@ -101,7 +101,7 @@ try {
 catch {
     Write-Host "`n== SETUP FAILED ==" -ForegroundColor Red
     Write-Host ("  " + $_.Exception.Message) -ForegroundColor Red
-    Write-Host "  See INSTALL.txt for prerequisites (Node 18+, internet). Fix the above, then re-run setup." -ForegroundColor Yellow
+    Write-Host "  See INSTALL.txt for prerequisites (Node 20+, internet). Fix the above, then re-run setup." -ForegroundColor Yellow
     $script:setupFailed = $true
 }
 finally {

@@ -180,4 +180,42 @@ public class OpsTests
         ComponentOps.Manage(remove);
         Assert.IsNull(go.GetComponent<Rigidbody>());
     }
+
+    // ---- Json.TryReadStringField -------------------------------------------------------------------
+    // Used by the bridge on its socket thread, where JsonUtility (main-thread only) cannot be called.
+
+    [Test]
+    public void TryReadStringField_ReadsTopLevelFields()
+    {
+        const string line = "{\"id\":\"abc-123\",\"command\":\"ping\",\"params\":{}}";
+        Assert.IsTrue(Json.TryReadStringField(line, "command", out string command));
+        Assert.AreEqual("ping", command);
+        Assert.IsTrue(Json.TryReadStringField(line, "id", out string id));
+        Assert.AreEqual("abc-123", id);
+    }
+
+    [Test]
+    public void TryReadStringField_HandlesEscapesAndMissingKeys()
+    {
+        const string line = "{\"command\":\"a\\\"b\\\\c\\nd\",\"n\":5}";
+        Assert.IsTrue(Json.TryReadStringField(line, "command", out string v));
+        Assert.AreEqual("a\"b\\c\nd", v);
+
+        Assert.IsFalse(Json.TryReadStringField(line, "absent", out _), "missing key must return false");
+        Assert.IsFalse(Json.TryReadStringField(line, "n", out _), "non-string value must return false");
+        Assert.IsFalse(Json.TryReadStringField(null, "command", out _));
+    }
+
+    [Test]
+    public void TryHandleOffMainThread_AnswersPingOnly()
+    {
+        Assert.IsTrue(CommandHandlers.TryHandleOffMainThread(
+            "{\"id\":\"p1\",\"command\":\"ping\",\"params\":{}}", out string response));
+        StringAssert.Contains("\"listenerAlive\":true", response);
+        StringAssert.Contains("\"p1\"", response);
+
+        Assert.IsFalse(CommandHandlers.TryHandleOffMainThread(
+            "{\"id\":\"p2\",\"command\":\"get_project_info\"}", out _),
+            "everything except ping must fall through to the main-thread path");
+    }
 }

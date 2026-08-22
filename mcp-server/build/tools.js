@@ -8,6 +8,21 @@ import { memoryTools } from "./memory.js";
  */
 export const tools = [
     {
+        name: "agen_ping",
+        description: "Health probe. Answers from the bridge's socket thread WITHOUT touching Unity's main thread, so it " +
+            "still replies while the Editor is busy. Call this FIRST whenever another agen_* tool times out — it " +
+            "tells you which half is actually broken:\n" +
+            "  • no response at all → the bridge really is down (Unity closed, or the package failed to load).\n" +
+            "  • ok with mainThreadResponsive:true → bridge and Editor are both fine; that one command is slow.\n" +
+            "  • ok with mainThreadResponsive:false → the bridge is fine and Unity's main thread is BLOCKED " +
+            "(asset import, shader compile, modal dialog or progress bar) or the Editor is parked. Do NOT report " +
+            "this as a bridge failure, do NOT tell the user to click the Editor if it is blocked, and do NOT fall " +
+            "back to writing editor scripts — read 'verdict', tell the user what Unity is busy with, and retry.",
+        schema: {},
+        // Short timeout: this must never touch the main thread, so a slow answer is itself a failure signal.
+        run: (port) => agenLinkRequest(port, "ping", {}, 5000),
+    },
+    {
         name: "agen_get_project_info",
         description: "Get the currently open Unity project's info: Unity version, absolute project path, product/company " +
             "name, active build target/platform, render pipeline, active scene path, loaded scenes, and " +

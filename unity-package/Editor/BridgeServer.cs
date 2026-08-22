@@ -43,6 +43,19 @@ namespace AgenLink
 
             // delayCall ensures EditorPrefs / other statics are ready before we read the port.
             EditorApplication.delayCall += Start;
+
+            // ...but delayCall needs an editor TICK to fire, and an unfocused/parked editor does not tick.
+            // A domain reload that lands while the editor is in the background therefore leaves the listener
+            // dead until the user clicks into Unity — silently, because Start (which logs on both success and
+            // failure) is never even called. Confirmed in Editor.log: 4 domain reloads, 2 "Listening" lines,
+            // 0 errors; the dead window ran until the *next* recompile happened to land with the editor
+            // focused. EditorWake cannot rescue it either — it only nudges when MainThreadDispatcher receives
+            // work, and with no listener nothing ever connects to enqueue any.
+            //
+            // afterAssemblyReload fires as part of the reload itself (right after InitializeOnLoad), so it
+            // does not depend on a tick. Start is idempotent, so whichever hook fires first wins.
+            AssemblyReloadEvents.afterAssemblyReload += Start;
+
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             EditorApplication.quitting += Stop;
         }

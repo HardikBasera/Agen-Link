@@ -41,6 +41,32 @@ namespace AgenLink
         /// </summary>
         private const int MainThreadTimeoutMs = 12000;
 
+        // Health check: re-bind whenever the listener or its accept thread has gone away.
+        private const double HealthCheckIntervalSec = 3.0;
+        private const double BindErrorLogIntervalSec = 30.0;
+        private static double _nextHealthCheckAt;
+        private static double _lastBindErrorAt = -1000.0;
+
+        /// <summary>
+        /// Runs on every editor tick (throttled). The bridge has now failed three distinct ways — a restart
+        /// hook that never fired, a socket orphaned across a domain reload, and an accept thread that outlived
+        /// its domain — and in every case the listener was gone or wedged while nothing noticed. Rather than
+        /// keep adding one-shot hooks for each new way it can die, this simply asserts the invariant every few
+        /// seconds: the listener is bound AND its accept thread is alive. If not, rebuild it.
+        /// </summary>
+        private static void HealthTick()
+        {
+            if (EditorApplication.timeSinceStartup < _nextHealthCheckAt) return;
+            _nextHealthCheckAt = EditorApplication.timeSinceStartup + HealthCheckIntervalSec;
+
+            if (_running && _listener != null && _acceptThread != null && _acceptThread.IsAlive) return;
+
+            // Half-dead (bound but no accept thread, or flagged running with no listener): tear the remains
+            // down first so Stop() closes the socket and joins the thread, then rebind cleanly.
+            if (_running || _listener != null) Stop();
+            Start();
+        }
+
         /// <summary>
         /// Says which half is actually stuck. If the editor loop is still ticking, the command itself is slow;
         /// if it is not, Unity is blocked or parked and no amount of reconnecting will help.
@@ -86,6 +112,10 @@ namespace AgenLink
 
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             EditorApplication.quitting += Stop;
+
+            // Backstop for every failure mode we have not thought of yet — see HealthTick.
+            EditorApplication.update -= HealthTick;
+            EditorApplication.update += HealthTick;
         }
 
         public static void Restart()
@@ -101,10 +131,19 @@ namespace AgenLink
             try
             {
                 _listener = new TcpListener(IPAddress.Loopback, port);
-                // Stop() closes the accepted connections, but their server sockets linger briefly in
-                // TIME_WAIT; SO_REUSEADDR lets the fresh listener bind over those instead of failing
-                // with "address already in use" on the next domain reload / restart.
-                _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+                // NOT SO_REUSEADDR. On Windows that option lets a socket bind over an *actively listening*
+                // one (unlike Unix, where it only covers TIME_WAIT), and which of the two then receives
+                // connections is undefined. Verified on this machine: a second listener binds over Unity's
+                // live one and succeeds. That turned a leaked accept thread into a silent catastrophe — the
+                // orphan kept the port, the new Start bound a second socket and logged "Listening", the
+                // kernel handed connections to the orphan, and every request was accepted by stale code that
+                // answered nothing. Symptom: port LISTENING, connects fine, even agen_ping times out, and
+                // CLOSE_WAIT piles up.
+                //
+                // ExclusiveAddressUse makes that collision an outright bind failure instead, which we log and
+                // the health check retries. Loud and recoverable beats silent and wedged.
+                _listener.ExclusiveAddressUse = true;
                 _listener.Start();
                 _activePort = port;
                 _running = true;
@@ -116,8 +155,17 @@ namespace AgenLink
             {
                 _running = false;
                 _activePort = -1;
-                Debug.LogError($"[Agen-Link] Failed to start on port {port}: {e.Message}. " +
-                               "Another Editor may be using it — change the port in the Agen-Link ▸ Settings tab.");
+                _listener = null;
+                // The health check retries every few seconds, so a transient collision (the previous socket
+                // not yet released after a reload) recovers on its own. Log sparingly so that retry loop
+                // cannot spam the Console, but always log the first failure.
+                if (EditorApplication.timeSinceStartup - _lastBindErrorAt > BindErrorLogIntervalSec)
+                {
+                    _lastBindErrorAt = EditorApplication.timeSinceStartup;
+                    Debug.LogError($"[Agen-Link] Failed to start on port {port}: {e.Message}. " +
+                                   "Retrying every few seconds. If it persists, another Editor may hold the " +
+                                   "port — change it in the Agen-Link ▸ Settings tab.");
+                }
             }
         }
 
@@ -125,8 +173,20 @@ namespace AgenLink
         {
             if (!_running && _listener == null) return;
             _running = false;
+
+            // Close the underlying socket as well as the listener. Stop() alone has been observed to leave
+            // the accept thread parked in AcceptTcpClient; that thread then survives the domain reload (Unity
+            // does not abort managed background threads), keeps the port bound, and services later
+            // connections with stale code. Closing the socket guarantees AcceptTcpClient throws and the loop
+            // exits.
+            try { _listener?.Server?.Close(); } catch { /* ignored */ }
             try { _listener?.Stop(); } catch { /* ignored */ }
             _listener = null;
+
+            // Do not return until the accept thread is actually gone, so it cannot outlive this domain.
+            try { if (_acceptThread != null && _acceptThread.IsAlive) _acceptThread.Join(1000); }
+            catch { /* ignored */ }
+            _acceptThread = null;
             // Close live client connections too (e.g. the MCP server kept alive by a running terminal
             // session). Closing only the listener leaves the port held by these, so the next rebind
             // fails. Each HandleClient thread removes itself from the list as its socket tears down.

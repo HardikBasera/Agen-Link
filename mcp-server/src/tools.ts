@@ -68,7 +68,11 @@ export const tools: ToolDef[] = [
     name: "agen_refresh_assets",
     description:
       "Ask Unity to import changed files and recompile scripts (AssetDatabase.Refresh + RequestScriptCompilation). " +
-      "Call this after writing/editing C# files, wait briefly, then poll agen_get_compile_errors until isCompiling is false.",
+      "Call this after writing/editing C# files. It returns {scheduled:true} immediately, BEFORE the refresh " +
+      "runs — deliberately, because a script change triggers a domain reload that would otherwise kill this " +
+      "reply in flight. So the isCompiling it returns is the OLD value; do not read anything into it. Then poll " +
+      "agen_get_compile_errors until isCompiling is false and read errorCount. The bridge may drop for a few " +
+      "seconds during the reload and reconnects itself — a failure there means retry, not that the refresh failed.",
     schema: {},
     run: (port) => agenLinkRequest(port, "refresh_assets"),
   },
@@ -481,9 +485,13 @@ export const tools: ToolDef[] = [
   {
     name: "agen_playmode",
     description:
-      "Control or query play mode: action play|stop|pause|unpause|step|status. play/stop trigger a domain " +
-      "reload — the bridge drops for a few seconds, so poll {action:'status'} until it answers again before " +
-      "doing anything else. Check status instead of asking the user whether the game is running.",
+      "Control or query play mode: action play|stop|pause|unpause|step|status. play/stop return " +
+      "{scheduled:true} immediately, BEFORE the change happens — deliberately, because each triggers a domain " +
+      "reload that would otherwise kill this reply in flight. The isPlaying they return is therefore the OLD " +
+      "value; do not read anything into it. Poll {action:'status'} until isPlaying is what you asked for. The " +
+      "bridge drops for a few seconds during the reload and reconnects itself, so a failure while polling means " +
+      "retry, not that play mode failed. pause/unpause/step/status are immediate and reload nothing. Check " +
+      "status instead of asking the user whether the game is running.",
     schema: { action: z.enum(["play", "stop", "pause", "unpause", "step", "status"]).describe("Play-mode command.") },
     run: (port, a) => agenLinkRequest(port, "playmode", { action: a.action }),
   },

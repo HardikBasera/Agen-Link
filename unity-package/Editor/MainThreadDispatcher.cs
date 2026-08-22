@@ -44,6 +44,31 @@ namespace AgenLink
         public static int QueueDepth => Queue.Count;
 
         /// <summary>
+        /// Run an action on the main thread after a short delay. Main thread only.
+        ///
+        /// Exists for the commands that trigger a domain reload — entering/leaving play mode, and asset
+        /// refresh. Those tear the bridge down: beforeAssemblyReload closes the listener and every client
+        /// socket, so a handler that performs the reload *inline* destroys the very connection its own reply
+        /// still has to travel back over, and the caller sees the request fail even though it worked. Running
+        /// the action a few frames later lets BridgeServer.HandleClient write and flush the response first.
+        /// </summary>
+        public static void RunAfter(double seconds, Action action)
+        {
+            double due = EditorApplication.timeSinceStartup + seconds;
+
+            void Tick()
+            {
+                if (EditorApplication.timeSinceStartup < due) return;
+                EditorApplication.update -= Tick;
+                try { action(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+
+            EditorApplication.update += Tick;
+            EditorWake.Nudge();   // a parked editor would never reach the due time on its own
+        }
+
+        /// <summary>
         /// Drain queued main-thread work. Called from <see cref="EditorApplication.update"/> and, so the
         /// bridge stays responsive while the editor is unfocused / after a domain reload, from the Agen-Link
         /// window's OnInspectorUpdate. Both callers are main-thread editor callbacks, so they never overlap.

@@ -7,7 +7,7 @@ const PORT = Number.parseInt(process.env.AGEN_LINK_PORT ?? "6577", 10);
 
 const server = new McpServer({
   name: "agen-link",
-  version: "0.2.1",
+  version: "0.3.0",
 });
 
 for (const tool of tools) {

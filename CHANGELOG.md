@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Documented that `Add package from git URL` is not supported** and why: the Unity package lives
+  in `unity-package/` (no root `package.json`), and the Editor resolves the `mcp-server`/`pty-host`
+  helpers as siblings of the package folder, which a git-URL install into `Library/PackageCache`
+  cannot provide. Added a Known-issues entry plus README/INSTALL notes; `Add package from disk`
+  remains the supported path.
+
 ### Changed
 - **Minimum supported Node.js is now 20** (was 18). `@modelcontextprotocol/sdk` 1.30 resolves
   `@hono/node-server` to 2.x, which declares `engines: node >=20`. CI has only ever tested on

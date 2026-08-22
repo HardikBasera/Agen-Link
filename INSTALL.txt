@@ -175,6 +175,14 @@ Do this inside each Unity project you want to use it in.
       [Agen-Link] Listening on 127.0.0.1:6577
    If you see that line, the bridge is working.
 
+NOTE - "Add package from git URL..." does NOT work for Agen-Link.
+   Unity would copy only the unity-package folder into your project's
+   Library\PackageCache. But the Editor code looks for the mcp-server and
+   pty-host helpers as SIBLING folders next to the package, and they are not
+   there - so the Terminal and the MCP bridge would both fail to start. Those
+   helpers also need a per-PC "npm install" (native node-pty), which cannot
+   live in the package cache. Always use "Add package from disk..." above.
+
 
 ============================================================
  STEP 4 - USE IT (the Terminal tab)

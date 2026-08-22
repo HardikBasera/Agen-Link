@@ -110,6 +110,14 @@ Setup has two parts: **one-time** steps you do once per PC, and **per-project** 
    …\Agen-Link\unity-package\package.json
    ```
 
+   > **Why not `Add package from git URL`?** It will not work, and this is by design — see
+   > [Known issues ▸ Installation](KNOWN_ISSUES.md#installation). Agen-Link ships three components:
+   > the Unity package plus two Node helpers (`mcp-server/`, `pty-host/`) that the Editor code
+   > resolves as **siblings** of the package folder. A git-URL install copies only `unity-package/`
+   > into `Library/PackageCache/`, where those siblings do not exist, so the Terminal and the MCP
+   > bridge both fail to start. The helpers also need a per-machine `npm install` (native
+   > `node-pty`), which cannot live in the package cache. **Install from disk.**
+
 5. **Open the window** — `Window ▸ Agen-Link`. The Unity Console should log `[Agen-Link] Listening on 127.0.0.1:6577`.
 
    <p align="center">

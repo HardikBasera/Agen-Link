@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   be attributed to the right half instead of guessed at.
 
 ### Fixed
+- **The bridge could bind a second socket over its own orphaned listener, wedging every request.** The
+  listener set `SO_REUSEADDR`, which on Windows permits binding over an *actively listening* socket
+  (unlike Unix, where it only covers `TIME_WAIT`) — and which socket then receives connections is
+  undefined. If an accept thread outlived a domain reload it kept the port, the next `Start` silently bound
+  a second socket and logged "Listening" as normal, and the kernel handed connections to the orphan, where
+  stale code answered nothing. The port looked healthy, connects succeeded, every request including
+  `agen_ping` timed out, and `CLOSE_WAIT` accumulated. Entering play mode (two reloads back to back) made
+  it most likely. The listener now uses `ExclusiveAddressUse`, so a collision is a loud bind failure that
+  the new health check retries, instead of a silent wedge.
+- **The accept thread can no longer outlive its domain.** `Stop` now closes the underlying socket as well
+  as the listener and joins the thread before returning.
+- **The bridge self-heals.** A health check on the editor tick asserts, every few seconds, that the listener
+  is bound and its accept thread alive, and rebuilds it otherwise — a backstop for failure modes not yet
+  identified, rather than another one-shot hook per bug.
 - **A stalled Unity main thread no longer leaks a thread and a socket per request.** The bridge waited on
   the main thread with an unbounded `GetResult()`, so any stall (asset import, shader compile, modal
   dialog) blocked the socket thread forever; the connection was never disposed, sat in `CLOSE_WAIT`, and

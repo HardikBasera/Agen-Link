@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **A failed port bind is no longer reported as an error until it actually persists.** The listener rebinds
+  on every domain reload, and a rebind that loses the race with the socket from the previous domain
+  recovers by itself within seconds. Reporting that as `LogError` painted a self-healing condition as a
+  dead bridge — red Console entries that sent us hunting a failure that had already fixed itself. The first
+  failures now log a warning that says what they usually mean; only a bind that is still failing after 60s
+  escalates to an error, because at that point the port really is taken and tool calls cannot reach the
+  Editor. A successful bind that follows failures now logs how long it took to recover, since Unity never
+  clears the Console across a domain reload and the earlier entries otherwise sit there looking unresolved.
+
 ### Fixed
+- **Anything appended after a logged exception message was silently dropped.** A Windows socket exception
+  arrives as a 256-character buffer padded with NULs (only ~92 of them are real text), and Unity logs
+  through a native `char*` that stops at the first NUL — so the sentence explaining what to do about a bind
+  failure never reached the Console, and `Trim()` could not help because NUL is not whitespace. Control
+  characters are now replaced before the message is composed.
 - **A play-mode game capture failed outright.** `agen_capture_screenshot` used
   `ScreenCapture.CaptureScreenshotAsTexture`, which only produces a valid texture at the END of a frame,
   while the bridge dispatches mid-frame from `EditorApplication.update` — so every capture taken in play

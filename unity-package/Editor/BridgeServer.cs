@@ -120,6 +120,11 @@ namespace AgenLink
             // does not depend on a tick. Start is idempotent, so whichever hook fires first wins.
             AssemblyReloadEvents.afterAssemblyReload += Start;
 
+            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): does this hook fire at all on a play-mode
+            // reload? Editor.log shows the port already held on the first Start after one. Remove before PR.
+            AssemblyReloadEvents.beforeAssemblyReload += () =>
+                Debug.Log("[Agen-Link][diag] beforeAssemblyReload fired.");
+
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             EditorApplication.quitting += Stop;
 
@@ -159,6 +164,10 @@ namespace AgenLink
                 _running = true;
                 _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "AgenLink.Accept" };
                 _acceptThread.Start();
+                // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): record which OS handle owns the port, so a
+                // later orphan can be matched to the domain that opened it. Remove before PR.
+                try { Debug.Log($"[Agen-Link][diag] bound port {port} on socket handle {_listener.Server.Handle}"); }
+                catch { /* ignored */ }
                 // Unity does not clear the Console on a domain reload, so a bind warning logged moments ago
                 // stays on screen looking unresolved long after the port became ours. Say so explicitly.
                 if (_bindFailingSince >= 0.0)
@@ -208,7 +217,24 @@ namespace AgenLink
 
         public static void Stop()
         {
-            if (!_running && _listener == null) return;
+            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): report what Stop was actually given to close.
+            // If this never prints on a play-mode reload, the hook is the bug; if it prints but the port
+            // stays held, the leak is a socket Stop does not know about. Remove before PR.
+            {
+                int diagClients; lock (_clientsLock) diagClients = _clients.Count;
+                string diagHandle;
+                try { diagHandle = _listener?.Server != null ? _listener.Server.Handle.ToString() : "-"; }
+                catch (Exception e) { diagHandle = "throw:" + e.GetType().Name; }
+                Debug.Log($"[Agen-Link][diag] Stop() entered: running={_running} " +
+                          $"listener={(_listener == null ? "null" : "set")} handle={diagHandle} " +
+                          $"clients={diagClients} acceptAlive={_acceptThread != null && _acceptThread.IsAlive}");
+            }
+
+            if (!_running && _listener == null)
+            {
+                Debug.Log("[Agen-Link][diag] Stop() early-returned — it had nothing to close.");
+                return;
+            }
             _running = false;
 
             // Close the underlying socket as well as the listener. Stop() alone has been observed to leave

@@ -44,8 +44,18 @@ namespace AgenLink
         // Health check: re-bind whenever the listener or its accept thread has gone away.
         private const double HealthCheckIntervalSec = 3.0;
         private const double BindErrorLogIntervalSec = 30.0;
+        /// <summary>
+        /// How long a bind failure must keep failing before it stops being the routine hand-off after a
+        /// domain reload and starts being a real problem worth an error.
+        /// </summary>
+        internal const double BindFailurePersistentSec = 60.0;
+
+        /// <summary>Whether a bind failure that has been retrying for this long is a real problem.</summary>
+        internal static bool BindFailureIsPersistent(double failingForSec) => failingForSec >= BindFailurePersistentSec;
+
         private static double _nextHealthCheckAt;
         private static double _lastBindErrorAt = -1000.0;
+        private static double _bindFailingSince = -1.0;   // -1 = the last bind attempt succeeded
 
         /// <summary>
         /// Runs on every editor tick (throttled). The bridge has now failed three distinct ways — a restart
@@ -149,22 +159,49 @@ namespace AgenLink
                 _running = true;
                 _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "AgenLink.Accept" };
                 _acceptThread.Start();
-                Debug.Log($"[Agen-Link] Listening on 127.0.0.1:{port} (bg-wake enabled)");
+                // Unity does not clear the Console on a domain reload, so a bind warning logged moments ago
+                // stays on screen looking unresolved long after the port became ours. Say so explicitly.
+                if (_bindFailingSince >= 0.0)
+                    Debug.Log($"[Agen-Link] Listening on 127.0.0.1:{port} (bg-wake enabled) — recovered after " +
+                              $"{EditorApplication.timeSinceStartup - _bindFailingSince:0.#}s of the port being " +
+                              "held; the bind warnings above are resolved.");
+                else
+                    Debug.Log($"[Agen-Link] Listening on 127.0.0.1:{port} (bg-wake enabled)");
+
+                _bindFailingSince = -1.0;
+                _lastBindErrorAt = -1000.0;
             }
             catch (Exception e)
             {
                 _running = false;
                 _activePort = -1;
                 _listener = null;
-                // The health check retries every few seconds, so a transient collision (the previous socket
-                // not yet released after a reload) recovers on its own. Log sparingly so that retry loop
-                // cannot spam the Console, but always log the first failure.
+                // A rebind that loses the race with the socket from the previous domain recovers on its own,
+                // so the first failures are routine and must NOT be errors: a red Console entry for a
+                // condition that heals itself sent us hunting a dead bridge that was already coming back.
+                // Only a failure that keeps failing means the port is genuinely taken and the bridge unusable.
+                if (_bindFailingSince < 0.0) _bindFailingSince = EditorApplication.timeSinceStartup;
+                double failingFor = EditorApplication.timeSinceStartup - _bindFailingSince;
+
+                // Log sparingly so the retry loop cannot spam the Console, but always log the first failure.
                 if (EditorApplication.timeSinceStartup - _lastBindErrorAt > BindErrorLogIntervalSec)
                 {
                     _lastBindErrorAt = EditorApplication.timeSinceStartup;
-                    Debug.LogError($"[Agen-Link] Failed to start on port {port}: {e.Message}. " +
-                                   "Retrying every few seconds. If it persists, another Editor may hold the " +
-                                   "port — change it in the Agen-Link ▸ Settings tab.");
+                    // Windows socket messages arrive with trailing CR/LF and a NUL. Unity logs through a
+                    // native char* and stops dead at the NUL, so anything appended after it - including the
+                    // sentence explaining what to do - silently never reaches the Console. Trim() does not
+                    // help: NUL is not whitespace, so it shields the trailing blanks from being trimmed.
+                    var clean = new StringBuilder(e.Message.Length);
+                    foreach (char ch in e.Message) clean.Append(char.IsControl(ch) ? ' ' : ch);
+                    string reason = clean.ToString().Trim();
+                    string detail = $"[Agen-Link] Could not bind port {port}: {reason}";
+                    if (BindFailureIsPersistent(failingFor))
+                        Debug.LogError($"{detail} Still failing after {failingFor:0}s, so the bridge is down " +
+                                       "and tool calls will not reach the Editor. Another Editor most likely " +
+                                       "holds the port — change it in the Agen-Link ▸ Settings tab.");
+                    else
+                        Debug.LogWarning($"{detail} That is normally the previous socket not yet released " +
+                                         "after a domain reload; retrying every few seconds.");
                 }
             }
         }

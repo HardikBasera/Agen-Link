@@ -190,6 +190,11 @@ namespace AgenLink
             {
                 _running = false;
                 _activePort = -1;
+                // Setting ExclusiveAddressUse above already forced the underlying Socket into existence, so
+                // just dropping the reference abandons a live handle to the GC — on the one path that runs
+                // precisely when things are already going wrong, and that the watchdog retries every 3s.
+                try { _listener?.Server?.Close(); } catch { /* ignored */ }
+                try { _listener?.Stop(); } catch { /* ignored */ }
                 _listener = null;
                 // A rebind that loses the race with the socket from the previous domain recovers on its own,
                 // so the first failures are routine and must NOT be errors: a red Console entry for a
@@ -211,9 +216,18 @@ namespace AgenLink
                     string reason = clean.ToString().Trim();
                     string detail = $"[Agen-Link] Could not bind port {port}: {reason}";
                     if (BindFailureIsPersistent(failingFor))
-                        Debug.LogError($"{detail} Still failing after {failingFor:0}s, so the bridge is down " +
-                                       "and tool calls will not reach the Editor. Another Editor most likely " +
-                                       "holds the port — change it in the Agen-Link ▸ Settings tab.");
+                        // Do NOT name a cause we have not checked. This used to assert "another Editor most
+                        // likely holds the port", which was wrong on the very case that produced it — one
+                        // Editor, holding the port itself — and sent us hunting a second Unity that did not
+                        // exist. Say what is observable and let the reader see which case they are in.
+                        Debug.LogError($"{detail} Still failing after {failingFor:0}s, so the bridge is down and " +
+                                       $"tool calls will not reach the Editor. Run  netstat -ano | findstr :{port}  " +
+                                       "to see who holds it: this Unity's own PID means a socket leaked from an " +
+                                       "earlier session and only restarting the Editor frees it; another PID means " +
+                                       "a second Editor or an unrelated program; no row at all means the port is " +
+                                       "reserved by Windows (Hyper-V/WSL reserve ranges at boot). For the last two, " +
+                                       "pick another port in Agen-Link ▸ Settings, then restart the terminal " +
+                                       "session so the CLI picks up the new port.");
                     else
                         Debug.LogWarning($"{detail} That is normally the previous socket not yet released " +
                                          "after a domain reload; retrying every few seconds.");

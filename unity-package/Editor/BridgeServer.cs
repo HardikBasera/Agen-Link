@@ -41,6 +41,21 @@ namespace AgenLink
         /// </summary>
         private const int MainThreadTimeoutMs = 12000;
 
+        /// <summary>
+        /// How long the accept thread waits for a connection per poll before re-checking whether it should
+        /// still be running. It must NOT park in AcceptTcpClient instead: on Unity's Mono runtime, closing a
+        /// socket does not wake a thread already blocked in a blocking Accept, and SafeSocketHandle is
+        /// reference counted, so the real closesocket() is deferred until that call returns. It never does,
+        /// the handle stays open, and the port is held for the life of the PROCESS — unreachable from managed
+        /// code once the domain reloads, so no retry can ever reclaim it and only restarting Unity helps.
+        /// That is the whole "Could not bind port" story. Poll returns the instant a connection is pending,
+        /// so this costs no accept latency; the timeout only bounds how long teardown waits.
+        /// </summary>
+        private const int AcceptPollMicroseconds = 500000;
+
+        /// <summary>Teardown budget for the accept thread. Must exceed <see cref="AcceptPollMicroseconds"/>.</summary>
+        private const int AcceptJoinTimeoutMs = 3000;
+
         // Health check: re-bind whenever the listener or its accept thread has gone away.
         private const double HealthCheckIntervalSec = 3.0;
         private const double BindErrorLogIntervalSec = 30.0;
@@ -120,11 +135,6 @@ namespace AgenLink
             // does not depend on a tick. Start is idempotent, so whichever hook fires first wins.
             AssemblyReloadEvents.afterAssemblyReload += Start;
 
-            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): does this hook fire at all on a play-mode
-            // reload? Editor.log shows the port already held on the first Start after one. Remove before PR.
-            AssemblyReloadEvents.beforeAssemblyReload += () =>
-                Debug.Log("[Agen-Link][diag] beforeAssemblyReload fired.");
-
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             EditorApplication.quitting += Stop;
 
@@ -164,10 +174,6 @@ namespace AgenLink
                 _running = true;
                 _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "AgenLink.Accept" };
                 _acceptThread.Start();
-                // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): record which OS handle owns the port, so a
-                // later orphan can be matched to the domain that opened it. Remove before PR.
-                try { Debug.Log($"[Agen-Link][diag] bound port {port} on socket handle {_listener.Server.Handle}"); }
-                catch { /* ignored */ }
                 // Unity does not clear the Console on a domain reload, so a bind warning logged moments ago
                 // stays on screen looking unresolved long after the port became ours. Say so explicitly.
                 if (_bindFailingSince >= 0.0)
@@ -217,24 +223,7 @@ namespace AgenLink
 
         public static void Stop()
         {
-            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): report what Stop was actually given to close.
-            // If this never prints on a play-mode reload, the hook is the bug; if it prints but the port
-            // stays held, the leak is a socket Stop does not know about. Remove before PR.
-            {
-                int diagClients; lock (_clientsLock) diagClients = _clients.Count;
-                string diagHandle;
-                try { diagHandle = _listener?.Server != null ? _listener.Server.Handle.ToString() : "-"; }
-                catch (Exception e) { diagHandle = "throw:" + e.GetType().Name; }
-                Debug.Log($"[Agen-Link][diag] Stop() entered: running={_running} " +
-                          $"listener={(_listener == null ? "null" : "set")} handle={diagHandle} " +
-                          $"clients={diagClients} acceptAlive={_acceptThread != null && _acceptThread.IsAlive}");
-            }
-
-            if (!_running && _listener == null)
-            {
-                Debug.Log("[Agen-Link][diag] Stop() early-returned — it had nothing to close.");
-                return;
-            }
+            if (!_running && _listener == null) return;
             _running = false;
 
             // Close the underlying socket as well as the listener. Stop() alone has been observed to leave
@@ -246,8 +235,16 @@ namespace AgenLink
             try { _listener?.Stop(); } catch { /* ignored */ }
             _listener = null;
 
-            // Do not return until the accept thread is actually gone, so it cannot outlive this domain.
-            try { if (_acceptThread != null && _acceptThread.IsAlive) _acceptThread.Join(1000); }
+            // Do not return until the accept thread is actually gone, so it cannot outlive this domain. The
+            // loop polls rather than blocking in Accept precisely so this join can succeed; if it ever times
+            // out, the socket handle above is still referenced and the port is about to be lost until Unity
+            // restarts, which is worth saying out loud rather than swallowing.
+            try
+            {
+                if (_acceptThread != null && _acceptThread.IsAlive && !_acceptThread.Join(AcceptJoinTimeoutMs))
+                    Debug.LogWarning($"[Agen-Link] The accept thread did not exit within {AcceptJoinTimeoutMs}ms. " +
+                                     $"Port {_activePort} may stay held until this Editor is restarted.");
+            }
             catch { /* ignored */ }
             _acceptThread = null;
             // Close live client connections too (e.g. the MCP server kept alive by a running terminal
@@ -263,14 +260,34 @@ namespace AgenLink
 
         private static void AcceptLoop()
         {
-            while (_running)
+            RunAcceptLoop(_listener, () => _running, client =>
             {
-                TcpClient client;
-                try { client = _listener.AcceptTcpClient(); }
-                catch { break; } // listener stopped / disposed
                 lock (_clientsLock) _clients.Add(client);
                 var t = new Thread(() => HandleClient(client)) { IsBackground = true, Name = "AgenLink.Client" };
                 t.Start();
+            });
+        }
+
+        /// <summary>
+        /// The accept loop, with the listener and the run flag passed in so it can be driven from a test.
+        /// Polls instead of blocking in AcceptTcpClient — see <see cref="AcceptPollMicroseconds"/> for why
+        /// that distinction is the difference between a port we can reclaim and one held until Unity exits.
+        /// </summary>
+        internal static void RunAcceptLoop(TcpListener listener, Func<bool> isRunning, Action<TcpClient> onAccepted)
+        {
+            while (isRunning())
+            {
+                TcpClient client;
+                try
+                {
+                    // False means the poll simply timed out: loop back and re-test isRunning so a stopped
+                    // bridge tears down within one poll interval instead of parking here forever.
+                    if (!listener.Server.Poll(AcceptPollMicroseconds, SelectMode.SelectRead)) continue;
+                    if (!isRunning()) break;
+                    client = listener.AcceptTcpClient();
+                }
+                catch { break; } // listener stopped / disposed
+                onAccepted(client);
             }
         }
 

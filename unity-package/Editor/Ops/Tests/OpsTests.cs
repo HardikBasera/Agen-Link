@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEditor;
@@ -264,5 +267,48 @@ public class OpsTests
         Assert.IsTrue(BridgeServer.BindFailureIsPersistent(BridgeServer.BindFailurePersistentSec),
             "at the threshold the failure is no longer routine");
         Assert.IsTrue(BridgeServer.BindFailureIsPersistent(BridgeServer.BindFailurePersistentSec + 60.0));
+    }
+
+    [Test]
+    public void AcceptLoop_AfterStopping_ExitsAndLeavesThePortRebindable()
+    {
+        // The bridge lost port 6578 for a whole Editor session because the accept thread was parked in
+        // AcceptTcpClient: on Mono, closing the socket does not wake it, and SafeSocketHandle refuses to run
+        // closesocket() while that call still holds a reference. The handle stayed open, the port stayed
+        // bound, and once the domain reloaded no managed code could reach it again — only restarting Unity
+        // freed it. Two things therefore have to hold, and the second is the one that actually bit us:
+        // the loop must exit when asked, AND the port must be genuinely free once it has.
+        var listener = new TcpListener(IPAddress.Loopback, 0);   // 0 = let the OS pick a free port
+        listener.ExclusiveAddressUse = true;
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        var running = true;
+        var accepted = 0;
+        var thread = new Thread(() => BridgeServer.RunAcceptLoop(
+            listener, () => Volatile.Read(ref running), c => { Interlocked.Increment(ref accepted); c.Close(); }));
+        thread.Start();
+
+        // Let it reach the loop, then ask it to stop the way a domain reload does.
+        Thread.Sleep(100);
+        Volatile.Write(ref running, false);
+
+        Assert.IsTrue(thread.Join(5000),
+            "the accept loop must exit once its run flag clears; if it cannot, it is blocking in Accept");
+
+        listener.Server.Close();
+        listener.Stop();
+
+        // The real assertion. A handle still referenced by a blocked Accept leaves the port bound even
+        // though Close() was called and returned without error.
+        Assert.DoesNotThrow(() =>
+        {
+            var rebind = new TcpListener(IPAddress.Loopback, port);
+            rebind.ExclusiveAddressUse = true;
+            rebind.Start();
+            rebind.Stop();
+        }, $"port {port} was still held after teardown, so the socket handle was never really closed");
+
+        Assert.AreEqual(0, accepted, "no client connected, so nothing should have been accepted");
     }
 }

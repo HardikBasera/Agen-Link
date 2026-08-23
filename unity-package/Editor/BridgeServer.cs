@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using UnityEditor;
@@ -67,6 +68,51 @@ namespace AgenLink
 
         /// <summary>Whether a bind failure that has been retrying for this long is a real problem.</summary>
         internal static bool BindFailureIsPersistent(double failingForSec) => failingForSec >= BindFailurePersistentSec;
+
+#if UNITY_EDITOR_WIN
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetHandleInformation(IntPtr hObject, uint dwMask, uint dwFlags);
+
+        private const uint HandleFlagInherit = 0x00000001;
+#endif
+
+        /// <summary>
+        /// Stops child processes from inheriting this socket, which is the difference between a port we can
+        /// reclaim and one held until the Editor exits.
+        ///
+        /// Windows creates socket handles INHERITABLE by default, and every process Unity spawns after the
+        /// bridge binds therefore receives a duplicate of our listening socket: the pty-host, the CLI it
+        /// starts, and the MCP server that one starts. A duplicate keeps the port bound no matter what we do
+        /// on our side, so Stop() closes the listener, reports success, and the port stays LISTENING under
+        /// Unity's PID with nothing able to accept on it. Proven live: an in-process test bind immediately
+        /// after Stop() still failed, with zero clients and the accept thread already gone, while the
+        /// pty-host node process (spawned by Unity 100s after the bind) sat holding the inherited handle.
+        ///
+        /// That is the real "Could not bind port" bug, and why only restarting Unity ever cleared it --
+        /// restarting kills the terminal's process tree along with its inherited copies.
+        /// </summary>
+        private static void DenyHandleInheritance(Socket socket)
+        {
+#if UNITY_EDITOR_WIN
+            if (socket == null) return;
+            try
+            {
+                if (!SetHandleInformation(socket.Handle, HandleFlagInherit, 0))
+                    Debug.LogWarning("[Agen-Link] Could not stop child processes from inheriting the bridge " +
+                                     "socket, so opening the Terminal tab may hold the port until this Editor " +
+                                     $"restarts (Win32 error {Marshal.GetLastWin32Error()}).");
+            }
+            catch (Exception e)
+            {
+                // Guidance first: a socket exception message can carry a NUL, and Unity's native logger
+                // stops dead at one, silently dropping everything after it.
+                Debug.LogWarning("[Agen-Link] Could not stop child processes from inheriting the bridge " +
+                                 "socket, so opening the Terminal tab may hold the port until this Editor " +
+                                 $"restarts. {e.GetType().Name}: {e.Message}");
+            }
+#endif
+        }
 
         private static double _nextHealthCheckAt;
         private static double _lastBindErrorAt = -1000.0;
@@ -174,6 +220,8 @@ namespace AgenLink
                 // the health check retries. Loud and recoverable beats silent and wedged.
                 _listener.ExclusiveAddressUse = true;
                 _listener.Start();
+                // Before anything can be spawned that would inherit it. See DenyHandleInheritance.
+                DenyHandleInheritance(_listener.Server);
                 _activePort = port;
                 _running = true;
                 _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "AgenLink.Accept" };
@@ -317,6 +365,9 @@ namespace AgenLink
         {
             RunAcceptLoop(_listener, () => _running, client =>
             {
+                // An accepted socket is bound to the same local port as the listener, so an inherited copy
+                // of one pins the port just as effectively. Same treatment.
+                DenyHandleInheritance(client.Client);
                 lock (_clientsLock) _clients.Add(client);
                 var t = new Thread(() => HandleClient(client)) { IsBackground = true, Name = "AgenLink.Client" };
                 t.Start();

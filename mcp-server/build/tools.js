@@ -345,8 +345,11 @@ export const tools = [
     {
         name: "agen_get_gameobject",
         description: "Get one GameObject's full data: every component with its serialized property names and current values — " +
-            "the SAME names agen_set_component_properties accepts. Call this BEFORE setting properties to discover " +
-            "valid fields and copy exact paths. Depth and array length are capped to keep the output small.",
+            "the SAME names agen_set_component_properties accepts. Call it before setting properties when you do not " +
+            "already know a component's field names (typically a project MonoBehaviour); stock Unity components use " +
+            "the usual serialized names and need no lookup. Not needed to confirm a write either — " +
+            "agen_set_component_properties already returns the post-write values. Depth and array length are capped " +
+            "to keep the output small.",
         schema: {
             target: z.string().describe("Object: instanceID, 'Parent/Child' path, or name."),
             includeProperties: z.boolean().optional().describe("Include each component's serialized property values (default true)."),
@@ -383,9 +386,16 @@ export const tools = [
             "NOT saved). properties is {name: value}: numbers/bools/strings, enum names, Vector2/3/4 as [x,y,z] or " +
             "{x,y,z}, Color as {r,g,b,a}, Quaternion as {x,y,z,w} or a 3-number euler array, object references as an " +
             "instanceID / 'Assets/..' path / {guid} / scene path, arrays as JSON arrays, nested structs as objects. " +
-            "Get valid names + current values from agen_get_gameobject first. Failures are reported per-property; the rest apply.",
+            "To set the SAME fields on several objects, pass targets: [..] and do it in ONE call — do not call this " +
+            "once per object. The reply includes `values`: the post-write value of everything that applied, read back " +
+            "from the object, so do NOT follow this with agen_get_gameobject just to confirm the write. Field names " +
+            "for stock Unity components (Transform, Rigidbody, Camera, Light...) are the usual serialized ones and " +
+            "need no lookup; call agen_get_gameobject first only when you do not know a component's field names, " +
+            "typically a project MonoBehaviour. Failures are reported per-property; the rest apply.",
         schema: {
-            target: z.string().describe("Object: instanceID, path, or name."),
+            target: z.string().optional().describe("One object: instanceID, path, or name. Use this OR targets."),
+            targets: z.array(z.string()).optional()
+                .describe("Several objects to apply the SAME properties to, in one call. Use instead of repeating the call."),
             componentType: z.string().describe("Component type, full or short name."),
             componentIndex: z.number().int().nonnegative().optional().describe("Which component of that type (default 0)."),
             properties: z.record(z.string(), z.unknown()).describe("Map of serialized property name -> value."),

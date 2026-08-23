@@ -21,16 +21,73 @@ namespace AgenLink.Ops
     {
         private const string UndoLabel = "Agen-Link set properties";
 
+        /// <summary>How deep to serialize a nested struct when echoing a written value back.</summary>
+        private const int EchoDepth = 2;
+
+        /// <summary>
+        /// Applies one property map to one component, or to MANY objects at once via params.targets. Setting
+        /// the same fields across N objects used to cost N calls, and each call is a separate round trip for
+        /// the caller, so batching is the difference between one exchange and N.
+        /// </summary>
         public static string Set(string requestLine)
         {
             var req = JObject.Parse(requestLine);
             JToken pr = req["params"];
-            string target = (string)pr?["target"];
             string componentType = (string)pr?["componentType"];
             int componentIndex = (int?)pr?["componentIndex"] ?? 0;
             if (!(pr?["properties"] is JObject props) || !props.HasValues)
                 throw new Exception("set_component_properties requires params.properties: {name: value, ...}");
 
+            // Single `target` keeps its original flat response so existing callers are unaffected; plural
+            // `targets` returns one result per object under `results`.
+            var targets = new List<string>();
+            if (pr?["targets"] is JArray arr)
+                foreach (JToken t in arr) { string s = (string)t; if (!string.IsNullOrEmpty(s)) targets.Add(s); }
+            string single = (string)pr?["target"];
+            if (targets.Count == 0)
+            {
+                if (string.IsNullOrEmpty(single))
+                    throw new Exception("set_component_properties requires params.target (or params.targets: [..]).");
+                return SetOne(single, componentType, componentIndex, props);
+            }
+            if (!string.IsNullOrEmpty(single)) targets.Insert(0, single);
+
+            var results = new List<string>();
+            int total = 0;
+            bool anySceneDirty = false;
+            // Each SetOne applies its own SerializedObject, which registers its own Undo step. One call the
+            // user sees as one edit must undo as one edit, so the whole batch collapses into a single group.
+            int undoGroup = Undo.GetCurrentGroup();
+            foreach (string t in targets)
+            {
+                // One bad target must not lose the writes that already landed on the others.
+                try
+                {
+                    string one = SetOne(t, componentType, componentIndex, props);
+                    var parsed = JObject.Parse(one);
+                    total += (int?)parsed["appliedCount"] ?? 0;
+                    anySceneDirty |= (bool?)parsed["sceneDirty"] ?? false;
+                    results.Add(one);
+                }
+                catch (Exception e)
+                {
+                    results.Add(new JObj().S("target", t).S("error", e.Message).Build());
+                }
+            }
+            Undo.SetCurrentGroupName(UndoLabel);
+            Undo.CollapseUndoOperations(undoGroup);
+
+            return new JObj()
+                .N("targetCount", targets.Count)
+                .N("appliedCount", total)
+                .Raw("results", Json.Arr(results))
+                .B("sceneDirty", anySceneDirty)
+                .S("note", anySceneDirty ? "Scene not saved — review (Ctrl+Z reverts), then save if wanted." : null)
+                .Build();
+        }
+
+        private static string SetOne(string target, string componentType, int componentIndex, JObject props)
+        {
             GameObject go = ObjectResolver.ResolveGameObject(target);
             Component comp = ObjectResolver.ResolveComponent(go, componentType, componentIndex);
 
@@ -74,10 +131,33 @@ namespace AgenLink.Ops
                 .N("instanceID", comp.GetInstanceID())
                 .N("appliedCount", applied.Count)
                 .Raw("applied", Json.Arr(appliedArr))
+                .Raw("values", EchoValues(comp, applied))
                 .Raw("failed", Json.Arr(failedArr))
                 .B("sceneDirty", isSceneObject)
                 .S("note", isSceneObject ? "Scene not saved — review (Ctrl+Z reverts), then save if wanted." : null)
                 .Build();
+        }
+
+        /// <summary>
+        /// Post-write values for the properties that applied, read from a FRESH SerializedObject so this is
+        /// what actually landed rather than what we asked for — Unity normalizes some writes (a quaternion,
+        /// a clamped range), and that difference is exactly what a caller would otherwise re-read to see.
+        /// Keys are the names the caller used. Properties applied through the reflection fallback are not
+        /// echoed: they are by definition outside the serialized model this renders.
+        /// </summary>
+        private static string EchoValues(Component comp, List<string> applied)
+        {
+            var fresh = new SerializedObject(comp);
+            fresh.Update();
+
+            var parts = new List<string>();
+            foreach (string name in applied)
+            {
+                SerializedProperty prop = FindProperty(fresh, name);
+                if (prop == null) continue;
+                parts.Add(Json.Str(name) + ":" + PropertyReader.ReadPropertyValue(prop, EchoDepth));
+            }
+            return "{" + string.Join(",", parts.ToArray()) + "}";
         }
 
         /// <summary>Exact name, then the common m_-prefixed serialized names (mass -> m_Mass).</summary>

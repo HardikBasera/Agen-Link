@@ -47,6 +47,16 @@ namespace AgenLink.Ops
             return sb.ToString();
         }
 
+        /// <summary>
+        /// The JSON value of ONE property, in the same encoding <see cref="ReadComponentProperties"/> emits.
+        /// Lets <see cref="PropertyEngine"/> echo back what a write actually landed, so confirming a set no
+        /// longer costs the caller a second round trip.
+        /// </summary>
+        public static string ReadPropertyValue(SerializedProperty p, int maxDepth)
+        {
+            return RenderValue(p, maxDepth);
+        }
+
         private static string RenderValue(SerializedProperty p, int depthLeft)
         {
             switch (p.propertyType)

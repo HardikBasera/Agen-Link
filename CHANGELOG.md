@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **`agen_set_component_properties` now sets many objects in one call and reports what it wrote.** Setting
+  three transforms on a live scene took **ten** bridge calls: one find, three lookups, three sets, three
+  read-backs — and each call is a separate round trip, so the tool surface, not the work, set the pace.
+  Three causes, all removed. The tool takes `targets: [..]` instead of one `target` per call. Its reply now
+  carries `values`, the post-write value of everything that applied, read back from a fresh
+  `SerializedObject` — so it reflects what Unity actually stored (a normalized quaternion, a clamped range),
+  which is precisely what a caller would otherwise re-read to learn. And a batch collapses into a **single
+  Undo group**, so one call is one Ctrl+Z. The same edit is now two calls instead of ten.
+- **`agen_get_gameobject` is no longer advertised as mandatory before every write.** Its description told
+  callers to read an object first to discover field names, and `agen_set_component_properties` repeated the
+  instruction — so a `Transform` edit paid a discovery read for names that are never in doubt. Both now say
+  to look it up only when a component's fields are genuinely unknown (typically a project MonoBehaviour),
+  and that confirming a write needs no read at all.
+  **Tool descriptions changed — restart the terminal session** or the CLI keeps the old text and will keep
+  calling one object at a time.
 - **A failed port bind is no longer reported as an error until it actually persists.** The listener rebinds
   on every domain reload, and a rebind that loses the race with the socket from the previous domain
   recovers by itself within seconds. Reporting that as `LogError` painted a self-healing condition as a
@@ -46,6 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   holds the port", which was wrong on the very case that produced it — a single Editor, holding the port
   itself — and sent us looking for a second Unity that did not exist. It now says how to tell the cases
   apart with `netstat` and what each one means.
+- **EditMode test fixtures could be stranded in the user's open scene.** `OpsTests` builds its fixtures with
+  `new GameObject()` in whatever scene is open and cleans them up in `[TearDown]` — which only runs if the
+  test finishes. A domain reload mid-run, or an aborted run, discards the tracking list and leaves the
+  objects behind in real work, with the scene marked dirty; two stray `OpsComp` objects were found that way
+  in a live project. A `[SetUp]` sweep now removes leftovers before each test rather than trusting the
+  previous run's exit, which also removes a real source of flakiness (the find-by-name and
+  ambiguous-sibling tests both count objects that a stray would change). It matches exact fixture names,
+  not an `Ops` prefix, so a user object that merely starts with those letters is never touched.
 - **Anything appended after a logged exception message was silently dropped.** A Windows socket exception
   arrives as a 256-character buffer padded with NULs (only ~92 of them are real text), and Unity logs
   through a native `char*` that stops at the first NUL — so the sentence explaining what to do about a bind

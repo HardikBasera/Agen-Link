@@ -252,4 +252,17 @@ public class OpsTests
         // targeting silently resolves to whichever sibling happens to come first.
         Assert.AreNotEqual(source.name, copy.name, "the copy must not reuse its source name");
     }
+
+    [Test]
+    public void BridgeServer_BindFailure_StaysAWarningUntilItPersists()
+    {
+        // A rebind that loses a race with the socket from the previous domain recovers by itself, so the
+        // first failures are routine and must not be reported as errors. Only a failure that keeps failing
+        // means the port is genuinely taken and the bridge is unusable.
+        Assert.IsFalse(BridgeServer.BindFailureIsPersistent(0.0), "the first failure after a reload is routine");
+        Assert.IsFalse(BridgeServer.BindFailureIsPersistent(BridgeServer.BindFailurePersistentSec - 1.0));
+        Assert.IsTrue(BridgeServer.BindFailureIsPersistent(BridgeServer.BindFailurePersistentSec),
+            "at the threshold the failure is no longer routine");
+        Assert.IsTrue(BridgeServer.BindFailureIsPersistent(BridgeServer.BindFailurePersistentSec + 60.0));
+    }
 }

@@ -57,14 +57,49 @@ namespace AgenLink.Ops
                 Undo.SetTransformParent(go.transform, parent.transform, UndoLabel + " create");
             }
 
-            if (!string.IsNullOrEmpty(p.name))
-                go.name = GameObjectUtility.GetUniqueNameForSibling(go.transform.parent, p.name);
+            // Named last, once the object sits under its final parent, so sibling uniqueness is judged
+            // against the right set. A copy carries no requested name of its own but must still not collide
+            // with the source it was duplicated from.
+            if (!string.IsNullOrEmpty(p.name)) SetUniqueName(go, p.name);
+            else if (kind == "copy") SetUniqueName(go, go.name);
 
             ApplyTransform(go.transform, p.position, p.rotation, p.scale, p.worldSpace);
 
             EditorSceneManager.MarkSceneDirty(go.scene);
             Selection.activeGameObject = go;
             return Summary(go, "created " + kind).Build();
+        }
+
+        /// <summary>
+        /// Give <paramref name="go"/> its requested name, uniquified against its siblings but never against
+        /// itself. GameObjectUtility.GetUniqueNameForSibling counts the object being named as one of the
+        /// siblings it checks, so naming an object that already holds that name returns "Name (1)" — which is
+        /// why every empty GameObject created through the bridge came out mis-named.
+        /// </summary>
+        private static void SetUniqueName(GameObject go, string name)
+        {
+            var taken = new HashSet<string>();
+            Transform parent = go.transform.parent;
+            if (parent == null)
+            {
+                foreach (GameObject root in go.scene.GetRootGameObjects())
+                    if (root != go) taken.Add(root.name);
+            }
+            else
+            {
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    GameObject sibling = parent.GetChild(i).gameObject;
+                    if (sibling != go) taken.Add(sibling.name);
+                }
+            }
+
+            if (!taken.Contains(name)) { go.name = name; return; }
+            for (int n = 1; ; n++)
+            {
+                string candidate = $"{name} ({n})";
+                if (!taken.Contains(candidate)) { go.name = candidate; return; }
+            }
         }
 
         // ---------- modify (nested params -> Newtonsoft) ----------
@@ -79,7 +114,7 @@ namespace AgenLink.Ops
             if (pr["name"] != null)
             {
                 Undo.RecordObject(go, UndoLabel + " rename");
-                go.name = GameObjectUtility.GetUniqueNameForSibling(go.transform.parent, (string)pr["name"]);
+                SetUniqueName(go, (string)pr["name"]);
                 changed.Add("name");
             }
             if (pr["parent"] != null)

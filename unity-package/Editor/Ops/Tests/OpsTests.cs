@@ -218,4 +218,38 @@ public class OpsTests
             "{\"id\":\"p2\",\"command\":\"get_project_info\"}", out _),
             "everything except ping must fall through to the main-thread path");
     }
+    [Test]
+    public void GameObjectOps_CreateEmpty_UsesTheRequestedNameExactly()
+    {
+        var create = new CommandHandlers.RequestParams { name = "OpsEmptyRoot" };
+        var created = JObject.Parse(GameObjectOps.Create(create));
+        var go = (GameObject)EditorUtility.InstanceIDToObject((int)created["instanceID"]);
+        Track(go);
+
+        // The empty branch created the object already named, then uniquified it against its own siblings,
+        // so it collided with itself and every empty object came out as "Name (1)".
+        Assert.AreEqual("OpsEmptyRoot", go.name);
+        Assert.AreEqual("OpsEmptyRoot", (string)created["name"]);
+    }
+
+    [Test]
+    public void GameObjectOps_Copy_GetsAUniqueNameAmongItsSiblings()
+    {
+        var parent = Track(new GameObject("OpsCopyParent"));
+        var source = new GameObject("OpsCopyChild");
+        source.transform.SetParent(parent.transform);
+
+        var create = new CommandHandlers.RequestParams
+        {
+            copyFrom = source.GetInstanceID().ToString(),
+            parent = parent.GetInstanceID().ToString(),
+        };
+        var created = JObject.Parse(GameObjectOps.Create(create));
+        var copy = (GameObject)EditorUtility.InstanceIDToObject((int)created["instanceID"]);
+        Track(copy);
+
+        // A copy that keeps its source name is indistinguishable by hierarchy path, so path-based
+        // targeting silently resolves to whichever sibling happens to come first.
+        Assert.AreNotEqual(source.name, copy.name, "the copy must not reuse its source name");
+    }
 }

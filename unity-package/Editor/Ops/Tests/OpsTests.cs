@@ -14,6 +14,46 @@ public class OpsTests
 {
     private readonly List<GameObject> _cleanup = new List<GameObject>();
 
+    /// <summary>
+    /// Every root object these tests create. Fixtures are built with `new GameObject()` in the CURRENTLY
+    /// OPEN scene, and <see cref="TearDown"/> only runs if the test finishes — a domain reload mid-run (or
+    /// an aborted run) discards <see cref="_cleanup"/> and strands them in the user's real scene, dirtying
+    /// it. Two stray "OpsComp" objects were found that way in a live project. SetUp therefore sweeps
+    /// leftovers before each test instead of trusting the previous run's exit. Exact names, not an "Ops"
+    /// prefix match, so a user object that merely starts with "Ops" is never touched.
+    /// Children (e.g. "OpsCopyChild") need no entry — destroying their tracked root takes them along.
+    /// </summary>
+    private static readonly HashSet<string> FixtureRootNames = new HashSet<string>
+    {
+        "OpsRoot_Unique", "OpsChild_Unique", "OpsDup_Ambiguous", "OpsMass", "OpsVecA", "OpsVecB",
+        "OpsPartial", "OpsRead", "OpsCube", "OpsCubeRenamed", "OpsFindMe", "OpsComp",
+        "OpsCopyParent", "OpsEmptyRoot", "OpsEcho", "OpsBatchA", "OpsBatchB",
+    };
+
+    [SetUp]
+    public void SweepStrayFixtures()
+    {
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+        {
+            UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+            if (!scene.isLoaded) continue;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root == null) continue;
+                if (IsStrayFixture(root.name)) UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+    }
+
+    /// <summary>An exact fixture name, or one Unity uniquified into "Name (1)" by a collision.</summary>
+    private static bool IsStrayFixture(string name)
+    {
+        if (FixtureRootNames.Contains(name)) return true;
+        int paren = name.IndexOf(" (", StringComparison.Ordinal);
+        return paren > 0 && name.EndsWith(")", StringComparison.Ordinal)
+            && FixtureRootNames.Contains(name.Substring(0, paren));
+    }
+
     [TearDown]
     public void TearDown()
     {
@@ -95,6 +135,76 @@ public class OpsTests
         Rigidbody rb = go.AddComponent<Rigidbody>();
         PropertyEngine.Set(SetLine(go.GetInstanceID(), "Rigidbody", new JObject { ["mass"] = 5f })); // mass -> m_Mass
         Assert.AreEqual(5f, rb.mass, 0.0001f);
+    }
+
+    [Test]
+    public void PropertyEngine_Set_EchoesTheWrittenValuesBack()
+    {
+        // Set returned only the NAMES it applied, so confirming a write cost the caller a whole extra
+        // get_gameobject round trip. It now reads the values back off the object and returns them.
+        GameObject go = Track(new GameObject("OpsEcho"));
+        Rigidbody rb = go.AddComponent<Rigidbody>();
+
+        var res = JObject.Parse(PropertyEngine.Set(
+            SetLine(go.GetInstanceID(), "Rigidbody", new JObject { ["mass"] = 7.5f })));
+
+        Assert.AreEqual(7.5f, rb.mass, 0.0001f, "the write itself must still land");
+        Assert.IsNotNull(res["values"], "the reply must carry the post-write values");
+        Assert.AreEqual(7.5f, (float)res["values"]["mass"], 0.0001f,
+            "the echoed value is keyed by the name the caller used and read back off the object");
+    }
+
+    [Test]
+    public void PropertyEngine_Set_AppliesToEveryTargetInOneCall()
+    {
+        // Setting the same fields on N objects used to cost N calls, and each call is a separate round
+        // trip for the caller. targets:[..] collapses that to one.
+        GameObject a = Track(new GameObject("OpsBatchA"));
+        GameObject b = Track(new GameObject("OpsBatchB"));
+        Rigidbody ra = a.AddComponent<Rigidbody>();
+        Rigidbody rb = b.AddComponent<Rigidbody>();
+
+        string line = new JObject
+        {
+            ["params"] = new JObject
+            {
+                ["targets"] = new JArray(a.GetInstanceID().ToString(), b.GetInstanceID().ToString()),
+                ["componentType"] = "Rigidbody",
+                ["componentIndex"] = 0,
+                ["properties"] = new JObject { ["mass"] = 3f },
+            },
+        }.ToString();
+
+        var res = JObject.Parse(PropertyEngine.Set(line));
+
+        Assert.AreEqual(3f, ra.mass, 0.0001f, "first target");
+        Assert.AreEqual(3f, rb.mass, 0.0001f, "second target");
+        Assert.AreEqual(2, (int)res["targetCount"]);
+        Assert.AreEqual(2, ((JArray)res["results"]).Count, "one result per target");
+    }
+
+    [Test]
+    public void PropertyEngine_Set_BadTargetDoesNotLoseTheOtherWrites()
+    {
+        // A batch is not all-or-nothing: one unresolvable target must not discard the writes that landed.
+        GameObject good = Track(new GameObject("OpsBatchA"));
+        Rigidbody rg = good.AddComponent<Rigidbody>();
+
+        string line = new JObject
+        {
+            ["params"] = new JObject
+            {
+                ["targets"] = new JArray("OpsNoSuchObject_Missing", good.GetInstanceID().ToString()),
+                ["componentType"] = "Rigidbody",
+                ["properties"] = new JObject { ["mass"] = 9f },
+            },
+        }.ToString();
+
+        var res = JObject.Parse(PropertyEngine.Set(line));
+
+        Assert.AreEqual(9f, rg.mass, 0.0001f, "the resolvable target still gets its write");
+        Assert.AreEqual(1, (int)res["appliedCount"], "only the good target counts as applied");
+        Assert.IsNotNull(((JArray)res["results"])[0]["error"], "the bad target reports its own error");
     }
 
     [Test]

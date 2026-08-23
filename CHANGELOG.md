@@ -18,6 +18,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   clears the Console across a domain reload and the earlier entries otherwise sit there looking unresolved.
 
 ### Fixed
+- **"Could not bind port" no longer strands the bridge until Unity is restarted.** Windows creates socket
+  handles **inheritable** by default, so every process the Editor spawned after the bridge bound received a
+  duplicate of the listening socket — the pty-host, the CLI it starts, and the MCP server that one starts.
+  A duplicate keeps the port bound no matter what the Editor does with its own copy, so `Stop()` closed the
+  listener, reported success, and the port stayed `LISTENING` under Unity's PID with nothing able to accept
+  on it. Every rebind after the next domain reload then failed forever, and only restarting the Editor
+  cleared it — because that kills the terminal's process tree and its inherited copies along with it. This
+  is the real cause behind the long-running "the bridge works at first, then stops" reports, and behind the
+  earlier conclusion that the port was reserved by Windows: an unrelated process genuinely could not bind
+  it either, because Unity's own descendants were holding it. `HANDLE_FLAG_INHERIT` is now cleared on the
+  listener as soon as it binds, and on every accepted socket — those share the listener's local port, so an
+  inherited copy of one pins the port just as effectively.
+- **The accept thread could pin the listening socket open.** It waited in a blocking `AcceptTcpClient`, and
+  on Unity's Mono runtime closing a socket does not wake a thread already parked there; `SafeSocketHandle`
+  is reference counted, so the real `closesocket()` was deferred until that call returned, which it never
+  did. `Stop()`'s one-second join then timed out in silence. The loop now polls with a timeout instead, so
+  it exits within one poll interval and the close actually takes effect. `Poll` returns the moment a
+  connection is pending, so accept latency is unchanged, and a join that still times out now warns rather
+  than being swallowed. Also fixes a latent `NullReferenceException`: the loop read the `_listener` field
+  that `Stop()` sets to null.
+- **A failed bind leaked a socket handle on every retry.** The `catch` dropped the listener without closing
+  it, and setting `ExclusiveAddressUse` just above had already forced the underlying `Socket` into
+  existence — so each attempt abandoned a live handle to the GC, on the one path that runs precisely when
+  things are already going wrong and that the health watchdog re-runs every three seconds.
+- **The escalated bind error asserted a cause it never checked.** It claimed "another Editor most likely
+  holds the port", which was wrong on the very case that produced it — a single Editor, holding the port
+  itself — and sent us looking for a second Unity that did not exist. It now says how to tell the cases
+  apart with `netstat` and what each one means.
 - **Anything appended after a logged exception message was silently dropped.** A Windows socket exception
   arrives as a 256-character buffer padded with NULs (only ~92 of them are real text), and Unity logs
   through a native `char*` that stops at the first NUL — so the sentence explaining what to do about a bind

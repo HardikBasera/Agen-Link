@@ -112,24 +112,40 @@ namespace AgenLink
         /// </summary>
         public static Task<string> DispatchAsync(string line)
         {
-            // execute_code compiles on a background pass and completes on a later editor frame — return its
-            // Task wrapped in the response envelope, without blocking the main thread meanwhile.
             RequestEnvelope req = null;
             try { req = JsonUtility.FromJson<RequestEnvelope>(line); } catch { /* fall through to sync path */ }
-            if (req != null && req.command == "execute_code")
+            if (req != null)
             {
-                string id = req.id;
                 var p = req.@params ?? new RequestParams();
-                Task<string> exec;
-                try { exec = Ops.CodeExecutor.ExecuteAsync(p.code ?? ""); }
-                catch (Exception e) { return Task.FromResult(Error(id, e.Message)); }
-                return exec.ContinueWith(t =>
-                    t.IsFaulted
-                        ? Error(id, t.Exception?.GetBaseException().Message ?? "execute_code failed")
-                        : new JObj().S("id", id).B("ok", true).Raw("data", t.Result).Build(),
-                    TaskContinuationOptions.ExecuteSynchronously);
+                Func<Task<string>> spansFrames = null;
+
+                // execute_code compiles on a background pass and finishes on a later editor frame.
+                if (req.command == "execute_code")
+                    spansFrames = () => Ops.CodeExecutor.ExecuteAsync(p.code ?? "");
+                // A play-mode screenshot is only written by Unity at the end of a frame, so it finishes on a
+                // later one too; every other capture completes inline and is wrapped in a done Task.
+                else if (req.command == "capture_screenshot")
+                    spansFrames = () => Ops.ScreenshotOps.CaptureAsync(p);
+
+                if (spansFrames != null) return RunSpanningCommand(req.id, req.command, spansFrames);
             }
             return Task.FromResult(Dispatch(line));
+        }
+
+        /// <summary>
+        /// Wrap a command that completes on a later editor frame in the response envelope, without blocking
+        /// the main thread while it runs.
+        /// </summary>
+        private static Task<string> RunSpanningCommand(string id, string command, Func<Task<string>> start)
+        {
+            Task<string> running;
+            try { running = start(); }
+            catch (Exception e) { return Task.FromResult(Error(id, e.Message)); }
+            return running.ContinueWith(t =>
+                t.IsFaulted
+                    ? Error(id, t.Exception?.GetBaseException().Message ?? command + " failed")
+                    : new JObj().S("id", id).B("ok", true).Raw("data", t.Result).Build(),
+                TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public static string Error(string id, string message)

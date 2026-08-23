@@ -197,10 +197,6 @@ namespace AgenLink
 
         public static void Start()
         {
-            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): who calls Start, and does it bind? A late
-            // rebind between beforeAssemblyReload and the domain unload would orphan a socket that nothing
-            // can ever close. The stack says which hook we came from. Remove before the fix lands.
-            Debug.Log($"[Agen-Link][diag] Start() called: running={_running}\n{new System.Diagnostics.StackTrace(true)}");
             if (_running) return;
             int port = BridgeSettings.Port;
             try
@@ -289,24 +285,7 @@ namespace AgenLink
 
         public static void Stop()
         {
-            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): remove before the fix lands.
-            int diagPort = _activePort;
-            {
-                string h;
-                try { h = _listener?.Server != null ? _listener.Server.Handle.ToString() : "-"; }
-                catch (Exception e) { h = "throw:" + e.GetType().Name; }
-                int n; lock (_clientsLock) n = _clients.Count;
-                Debug.Log($"[Agen-Link][diag] Stop() entered: running={_running} " +
-                          $"listener={(_listener == null ? "null" : "set")} handle={h} clients={n} " +
-                          $"acceptAlive={_acceptThread != null && _acceptThread.IsAlive}\n" +
-                          new System.Diagnostics.StackTrace(true));
-            }
-
-            if (!_running && _listener == null)
-            {
-                Debug.Log("[Agen-Link][diag] Stop() early-returned — it had nothing to close.");
-                return;
-            }
+            if (!_running && _listener == null) return;
             _running = false;
 
             // Close the underlying socket as well as the listener. Stop() alone has been observed to leave
@@ -339,26 +318,6 @@ namespace AgenLink
                 _clients.Clear();
             }
             _activePort = -1;
-
-            // TEMP DIAGNOSTIC (fix-bridge-socket-orphaning): THE decisive question. Everything Stop knows
-            // about is now closed, so ask the OS directly whether the port actually came free. FREE means
-            // Stop works and something rebinds it afterwards; HELD means a socket we closed is still open.
-            // Remove before the fix lands.
-            if (diagPort > 0)
-            {
-                try
-                {
-                    var probe = new TcpListener(IPAddress.Loopback, diagPort) { ExclusiveAddressUse = true };
-                    probe.Start();
-                    probe.Server.Close();
-                    probe.Stop();
-                    Debug.Log($"[Agen-Link][diag] after Stop(), port {diagPort} is FREE.");
-                }
-                catch (Exception e)
-                {
-                    Debug.Log($"[Agen-Link][diag] after Stop(), port {diagPort} is STILL HELD: {e.GetType().Name}");
-                }
-            }
         }
 
         private static void AcceptLoop()

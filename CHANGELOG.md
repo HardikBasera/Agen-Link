@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A play-mode game capture failed outright.** `agen_capture_screenshot` used
+  `ScreenCapture.CaptureScreenshotAsTexture`, which only produces a valid texture at the END of a frame,
+  while the bridge dispatches mid-frame from `EditorApplication.update` — so every capture taken in play
+  mode died with "Passed in texture is invalid (null)". It now uses `ScreenCapture.CaptureScreenshot` and
+  completes the request from a later editor tick, once the PNG is actually on disk. That path is the only
+  one that includes screen-space-overlay UI, so rendering a camera instead is not a substitute.
+- **Every empty GameObject created through the bridge came back mis-named.** `agen_create_gameobject`
+  named the object before uniquifying it, so `GameObjectUtility.GetUniqueNameForSibling` counted the object
+  as one of its own siblings and always returned `Name (1)`. Names are now uniquified against siblings
+  excluding the object itself. The same self-collision applied to renaming through `agen_modify_gameobject`.
+- **A `copyFrom` duplicate kept the name of its source**, leaving two siblings sharing one hierarchy path,
+  so path-based targeting silently resolved to whichever happened to come first. Copies are uniquified too.
+
 ## [0.3.1] - 2026-08-23
 
 ### Fixed

@@ -9,7 +9,7 @@ namespace AgenLink.Cli
         {
             new ClaudeProvider(),
             new AntigravityProvider(),
-            // Task 3 appends: new CodexProvider(),
+            new CodexProvider(),
         };
 
         public static IReadOnlyList<CliProvider> All => Providers;

@@ -21,8 +21,7 @@ namespace AgenLink.Cli
         public override string AutoDetectHint =>
             "Auto-detected from %LOCALAPPDATA%\\agy. Set only if agy isn't found.";
         public override string ResumeHint =>
-            "Antigravity keeps its replies in its own store — reopen this conversation with " +
-            "“agy --continue” in the Terminal.";
+            "Reopen it with “agy --continue” in the Terminal, or in the Antigravity app.";
         public override Color AccentColor => new Color(0x8B / 255f, 0x9C / 255f, 0xF6 / 255f); // violet
 
         public override string PathOverride

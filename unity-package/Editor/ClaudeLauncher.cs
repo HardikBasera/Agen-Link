@@ -194,9 +194,9 @@ namespace AgenLink
             sb.Append("- Render pipeline: ").Append(rpName).Append("\n\n");
             sb.Append(BuildRulesBlock());
             sb.Append("\n## Memory & optimization\n\n");
-            sb.Append("- BEFORE scanning the project, call `agen_memory_search` to reuse what the other CLI already learned.\n");
+            sb.Append("- BEFORE scanning the project, call `agen_memory_search` to reuse what the other CLIs already learned.\n");
             sb.Append("- When you learn something durable (an architecture decision, a gotcha, where a system lives),\n");
-            sb.Append("  record it with `agen_memory_append` so the other CLI inherits it.\n");
+            sb.Append("  record it with `agen_memory_append` so the other CLIs inherit it.\n");
             sb.Append("- Scene optimization loop: `agen_audit_scene` + `agen_audit_assets` (structured findings), then\n");
             sb.Append("  `agen_perf_start` -> poll `agen_perf_status` -> `agen_perf_report` for play-mode numbers. Report\n");
             sb.Append("  findings to the user, apply agreed fixes via `agen_apply_fixes` (scene fixes are Undo-able and\n");

@@ -9,7 +9,8 @@ using UnityEngine;
 namespace AgenLink.History
 {
     /// <summary>IMGUI browser of past AI sessions for the project, in the approved "editorial terminal"
-    /// design: per-agent color coding (YOU teal / CLAUDE coral / ANTIGRAVITY violet / ANALYSIS amber),
+    /// design: per-agent color coding (YOU teal / CLAUDE coral / ANTIGRAVITY violet / CODEX green /
+    /// ANALYSIS amber),
     /// accent-bar turns instead of heavy bubbles, expandable tool-action details, "Show more" clamp on
     /// long replies, relative timestamps, and an agent filter. Loads off the GUI thread.</summary>
     internal sealed class ConversationHistoryView
@@ -198,8 +199,10 @@ namespace AgenLink.History
 
                 if (c.MetaOnly)
                 {
-                    GUILayout.Label("This session's content is stored by " + AgentName(c) + " itself. " +
-                                    (CliRegistry.Find(c.Agent)?.ResumeHint ?? ""), _metaInfo);
+                    var metaProvider = CliRegistry.Find(c.Agent);
+                    GUILayout.Label("This session's content is stored by " +
+                                    (metaProvider?.DisplayName ?? AgentName(c)) + " itself. " +
+                                    (metaProvider?.ResumeHint ?? ""), _metaInfo);
                 }
                 else
                 {
@@ -207,7 +210,8 @@ namespace AgenLink.History
                         DrawTurn(i, t, c.Turns[t], c);
                     var provider = CliRegistry.Find(c.Agent);
                     if (provider != null && provider.Id != "claude")
-                        GUILayout.Label(provider.ResumeHint, _metaInfo);
+                        GUILayout.Label(provider.DisplayName + " keeps its replies in its own store. " +
+                                        provider.ResumeHint, _metaInfo);
                 }
                 GUILayout.Space(6);
             }
@@ -237,7 +241,8 @@ namespace AgenLink.History
                 else if (t.Kind == TurnKind.Action) actions++;
             }
             string p = prompts + (prompts == 1 ? " prompt" : " prompts");
-            if (c.Agent != "claude" && CliRegistry.Find(c.Agent) != null) return p + " · replies in " + c.Agent;
+            var replyProvider = CliRegistry.Find(c.Agent);
+            if (c.Agent != "claude" && replyProvider != null) return p + " · replies in " + replyProvider.DisplayName;
             return p + " · " + actions + (actions == 1 ? " action" : " actions");
         }
 

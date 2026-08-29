@@ -21,7 +21,7 @@ namespace AgenLink.Cli
         public override string AutoDetectHint =>
             "Auto-detected from npm global / PATH. Set only if Claude isn't found.";
         public override string ResumeHint =>
-            "Reopen this conversation with “claude --continue” in the Terminal.";
+            "Reopen it with “claude --continue” in the Terminal.";
         public override Color AccentColor => new Color(0xE0 / 255f, 0x8A / 255f, 0x66 / 255f); // coral
 
         public override string PathOverride

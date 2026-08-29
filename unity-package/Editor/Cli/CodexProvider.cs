@@ -28,8 +28,7 @@ namespace AgenLink.Cli
         public override string AutoDetectHint =>
             "Auto-detected from npm global / the Windows installer / PATH. Set only if Codex isn't found.";
         public override string ResumeHint =>
-            "Codex keeps its replies in its own store — reopen this conversation with " +
-            "\u201ccodex resume\u201d in the Terminal.";
+            "Reopen it with \u201ccodex resume\u201d in the Terminal.";
         public override Color AccentColor => new Color(0x6E / 255f, 0xC1 / 255f, 0x7C / 255f); // green
 
         public override string PathOverride
@@ -154,10 +153,11 @@ namespace AgenLink.Cli
                     Newtonsoft.Json.Linq.JObject o;
                     try { o = Newtonsoft.Json.Linq.JObject.Parse(raw); } catch { continue; }
 
-                    // A record with no recognizable cwd is kept (we cannot prove it is another
-                    // project); one that names a different project is skipped.
                     string cwd = First(o, "cwd", "workspace", "project", "project_root");
-                    if (!string.IsNullOrEmpty(cwd) && SessionLog.Norm(cwd) != want) continue;
+                    // No recognisable cwd means we cannot prove the record belongs to this project.
+                    // Skip it: the project-scoped sessions.jsonl stub fallback is the reliable path, and
+                    // keeping unattributable records would both mis-attribute them and suppress that fallback.
+                    if (string.IsNullOrEmpty(cwd) || SessionLog.Norm(cwd) != want) continue;
 
                     string prompt = First(o, "text", "display", "prompt", "message")?.Trim();
                     if (string.IsNullOrEmpty(prompt)) continue;

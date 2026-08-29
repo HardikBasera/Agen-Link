@@ -88,6 +88,19 @@ public class CodexProviderTests
         StringAssert.Contains("AGEN_LINK_CLI=\"codex\"", env);
     }
 
+    // The steering string is the riskiest value we pass: it is long and space-heavy, and it travels
+    // through TOML quoting, JSON argv serialization and node-pty's ConPTY command line.
+    [Test]
+    public void BuildArgs_PassesTheSharedSystemPromptAsDeveloperInstructions()
+    {
+        var map = Overrides(Codex().BuildArgs());
+        string value = map["developer_instructions"];
+
+        Assert.AreEqual(Toml.Str(CliProvider.SystemPrompt), value);
+        StringAssert.StartsWith("\"", value);
+        StringAssert.EndsWith("\"", value);
+    }
+
     [Test]
     public void BuildArgs_ClearsTheMcpFailureWhenWiringSucceeds()
     {

@@ -13,7 +13,6 @@ public class CliRegistryTests
     [TearDown]
     public void RestoreSettings() { BridgeSettings.TerminalCli = _savedCli; }
 
-    // Task 3 extends this to include "codex" once CodexProvider is registered.
     [Test]
     public void All_StartsWithClaudeThenAntigravity()
     {

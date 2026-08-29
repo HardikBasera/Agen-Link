@@ -364,7 +364,7 @@ namespace AgenLink.History
                 try
                 {
                     result = TranscriptReader.LoadAll(root);
-                    result.AddRange(SessionLog.LoadAntigravity(root));
+                    result.AddRange(AgenLink.Cli.CliRegistry.Find("antigravity").LoadHistory(root));
                     result.AddRange(Analysis.AnalysisLog.LoadConversations(root));
                     result.Sort((a, b) => b.StartedAt.CompareTo(a.StartedAt));   // keep newest-first
                 }

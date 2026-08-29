@@ -585,7 +585,7 @@ namespace AgenLink
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Claude CLI", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Resolved:", ClaudeCli.ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("Resolved:", Cli.CliRegistry.Find("claude").ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.BeginHorizontal();
             BridgeSettings.ClaudePath = EditorGUILayout.TextField("Override", BridgeSettings.ClaudePath);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
@@ -598,7 +598,7 @@ namespace AgenLink
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Antigravity CLI (agy)", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Resolved:", AntigravityCli.ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("Resolved:", Cli.CliRegistry.Find("antigravity").ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.BeginHorizontal();
             BridgeSettings.AntigravityPath = EditorGUILayout.TextField("Override", BridgeSettings.AntigravityPath);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))

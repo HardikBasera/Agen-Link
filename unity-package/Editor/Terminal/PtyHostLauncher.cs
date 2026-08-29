@@ -57,31 +57,15 @@ namespace AgenLink.Terminal
             // Shared project memory files for whichever CLI runs (AGENTS.md + CLAUDE.md/GEMINI.md + .gitignore).
             try { ConfigBuilder.EnsureProjectMemoryFiles(); } catch { /* non-fatal: launch anyway */ }
 
-            // Pick the CLI: claude.exe or agy.exe (Antigravity) — both native console exes. Antigravity's
-            // Unity bridge comes from ~/.gemini/config/mcp_config.json we write here (it has no --mcp-config
-            // flag like Claude).
+            // Pick the CLI and let it wire its own Unity bridge: Claude passes a --mcp-config temp
+            // file, Antigravity writes ~/.gemini/config/mcp_config.json, Codex injects -c overrides.
             string cmd;
             var args = new System.Collections.Generic.List<string>();
+            AgenLink.Cli.CliProvider cli = AgenLink.Cli.CliRegistry.Current;
             try
             {
-                if (BridgeSettings.TerminalCli == "antigravity")
-                {
-                    cmd = AntigravityCli.ResolveExe();
-                    // Bridge is optional — agy still runs without it — but a missing/failed config means zero
-                    // agen_* tools, so surface it loudly instead of swallowing it (mirrors the Claude path).
-                    try
-                    {
-                        if (ConfigBuilder.WriteAntigravityMcpConfig()) LaunchDiagnostics.McpFailure = null;
-                        else TerminalConfigBuilder.ReportMcpFailure("mcp-server/build/index.js was not found.");
-                    }
-                    catch (Exception e) { TerminalConfigBuilder.ReportMcpFailure(e.Message); }
-                    args.AddRange(TerminalConfigBuilder.BuildAntigravityArgs());
-                }
-                else
-                {
-                    cmd = ClaudeCli.ResolveExe();
-                    args.AddRange(TerminalConfigBuilder.BuildClaudeArgs());
-                }
+                cmd = cli.ResolveExe();
+                args.AddRange(cli.BuildArgs());
             }
             catch (Exception e) { error = e.Message; return false; }
 
@@ -129,9 +113,9 @@ namespace AgenLink.Terminal
             BridgeSettings.TerminalHostPid = proc.Id;
             BridgeSettings.TerminalHostPort = port;
             BridgeSettings.TerminalHostToken = token;
-            // Session log feeds the History tab (Antigravity content isn't parseable, but the session is).
-            History.SessionLog.Append(ConfigBuilder.ProjectRoot(),
-                BridgeSettings.TerminalCli == "antigravity" ? "antigravity" : "claude");
+            // Session log feeds the History tab (some CLIs keep their content in their own store,
+            // but the session itself is always recorded).
+            History.SessionLog.Append(ConfigBuilder.ProjectRoot(), cli.Id);
             return true;
         }
 

@@ -9,49 +9,6 @@ using UnityEngine.Rendering;
 
 namespace AgenLink
 {
-    /// <summary>Locates the Claude CLI executable.</summary>
-    internal static class ClaudeCli
-    {
-        /// <summary>
-        /// Resolve the real <c>claude.exe</c>. The npm global install ships a native exe at
-        /// %APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe (the claude.cmd shim just calls it).
-        /// Launching the exe directly avoids any shell-quoting issues.
-        /// </summary>
-        public static string ResolveExe()
-        {
-            // Manual override from Settings.
-            string custom = BridgeSettings.ClaudePath;
-            if (!string.IsNullOrEmpty(custom) && File.Exists(custom)) return custom;
-
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string primary = Path.Combine(appData, "npm", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
-            if (File.Exists(primary)) return primary;
-
-            string pathVar = Environment.GetEnvironmentVariable("PATH") ?? "";
-            foreach (var dir in pathVar.Split(Path.PathSeparator))
-            {
-                if (string.IsNullOrWhiteSpace(dir)) continue;
-                try
-                {
-                    string candidate = Path.Combine(dir.Trim(), "claude.exe");
-                    if (File.Exists(candidate)) return candidate;
-                }
-                catch { /* malformed PATH entry */ }
-            }
-
-            throw new Exception(
-                "Could not find claude.exe. Install Claude Code (npm i -g @anthropic-ai/claude-code) " +
-                "or make sure it is on PATH.");
-        }
-
-        /// <summary>Non-throwing description for the Settings label.</summary>
-        public static string ResolveDisplay()
-        {
-            try { return ResolveExe(); }
-            catch (Exception e) { return "(not found) " + e.Message; }
-        }
-    }
-
     /// <summary>
     /// Builds the MCP config for each CLI (Claude: %TEMP% file passed via --mcp-config; Antigravity: the
     /// HOME-level config agy reads), generates the shared project-memory files, and resolves the MCP

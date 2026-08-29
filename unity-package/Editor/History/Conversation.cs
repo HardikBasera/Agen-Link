@@ -19,8 +19,8 @@ namespace AgenLink.History
         public string Title;
         public DateTime StartedAt;                       // local time; used for date grouping/sorting
         public string FilePath;
-        public string Agent = "claude";                  // "claude" | "antigravity" | "analysis" — drives badge + colors
-        public bool MetaOnly;                            // agy sessions: we know they ran, content lives in agy's store
+        public string Agent = "claude";                  // a CliProvider.Id, or "analysis" — drives badge + colors
+        public bool MetaOnly;                            // agy/codex sessions: we know they ran, content lives in the CLI's store
         public string SourceNote;                        // analysis cards only: "Analysis tab" | "Terminal/MCP"
         public List<ConvTurn> Turns = new List<ConvTurn>();
     }

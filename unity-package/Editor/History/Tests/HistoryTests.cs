@@ -108,4 +108,21 @@ public class HistoryTests
         Assert.AreEqual("3 days ago", DateGroups.Rel(now.AddDays(-3), now));
         Assert.AreEqual("May 4",      DateGroups.Rel(now.AddMonths(-1), now));
     }
+
+    [Test]
+    public void AgentFilterIndex_MapsAllInRegistryOrderThenAnalysis()
+    {
+        // 0 is "All"; providers follow in registry order; "analysis" is last.
+        for (int i = 0; i < AgenLink.Cli.CliRegistry.All.Count; i++)
+            Assert.AreEqual(i + 1, AgenLink.History.ConversationHistoryView.AgentFilterIndex(AgenLink.Cli.CliRegistry.All[i].Id));
+
+        Assert.AreEqual(AgenLink.Cli.CliRegistry.All.Count + 1,
+                        AgenLink.History.ConversationHistoryView.AgentFilterIndex("analysis"));
+    }
+
+    [Test]
+    public void AgentFilterIndex_IsMinusOneForAnUnknownAgent()
+    {
+        Assert.AreEqual(-1, AgenLink.History.ConversationHistoryView.AgentFilterIndex("gemini"));
+    }
 }

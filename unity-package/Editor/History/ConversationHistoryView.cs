@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using AgenLink.Cli;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,11 +26,28 @@ namespace AgenLink.History
         private bool _olderExpanded;
         private int _filterIndex;
         private int _sortIndex;                                 // 0 = oldest first (newest at the bottom)
-        private int _agentIndex;                                // 0 all, 1 claude, 2 antigravity, 3 analysis
+        private int _agentIndex;                                // 0 = all; see AgentFilterIndex
         private bool _scrollToBottom;
         private static readonly string[] Filters = { "All", "Today", "Last 7 days", "Last 30 days" };
         private static readonly string[] SortModes = { "Oldest first", "Newest first" };
-        private static readonly string[] Agents = { "All", "Claude", "Antigravity", "Analysis" };
+        private static readonly string[] Agents = BuildAgentLabels();
+
+        private static string[] BuildAgentLabels()
+        {
+            var labels = new List<string> { "All" };
+            foreach (var p in CliRegistry.All) labels.Add(p.DisplayName);
+            labels.Add("Analysis");
+            return labels.ToArray();
+        }
+
+        /// <summary>Index of an agent id in the filter popup: 0 is "All", providers follow in registry
+        /// order, "analysis" is last. -1 when the id is unknown.</summary>
+        public static int AgentFilterIndex(string agentId)
+        {
+            int i = CliRegistry.IndexOf(agentId);
+            if (i >= 0) return i + 1;
+            return agentId == "analysis" ? CliRegistry.All.Count + 1 : -1;
+        }
 
         private const int ClampLines = 14;      // long replies fold beyond this ("Show more")
         private const float BodyMaxWidth = 640f; // readable text measure, ~76ch
@@ -44,20 +62,19 @@ namespace AgenLink.History
         private static readonly Color Faint      = C(0x5F, 0x61, 0x6C);
         private static readonly Color YouCol     = C(0x4F, 0xC1, 0xB4);   // teal  — the human
         private static readonly Color YouBg      = C(0x1F, 0x2A, 0x28);
-        private static readonly Color ClaudeCol  = C(0xE0, 0x8A, 0x66);   // coral — Claude
-        private static readonly Color AgyCol     = C(0x8B, 0x9C, 0xF6);   // violet — Antigravity
+        private static readonly Color ClaudeCol  = C(0xE0, 0x8A, 0x66);   // coral — fallback for an unrecognized agent
         private static readonly Color AnaCol     = C(0xE2, 0xB1, 0x4E);   // amber — Analysis fixes
         private static readonly Color DetailText = C(0xB9, 0xBB, 0xC4);
         private static Color C(int r, int g, int b) => new Color(r / 255f, g / 255f, b / 255f);
 
         private static Color AgentColor(Conversation c) =>
-            c.Agent == "antigravity" ? AgyCol : c.Agent == "analysis" ? AnaCol : ClaudeCol;
+            CliRegistry.Find(c.Agent)?.AccentColor ?? (c.Agent == "analysis" ? AnaCol : ClaudeCol);
 
-        private static string AgentBadge(Conversation c) =>
-            c.Agent == "antigravity" ? "● ANTIGRAVITY" : c.Agent == "analysis" ? "● ANALYSIS" : "● CLAUDE";
+        private static string AgentBadge(Conversation c) => "● " + AgentName(c);
 
         private static string AgentName(Conversation c) =>
-            c.Agent == "antigravity" ? "ANTIGRAVITY" : c.Agent == "analysis" ? "ANALYSIS" : "CLAUDE";
+            CliRegistry.Find(c.Agent)?.DisplayName.ToUpperInvariant()
+            ?? (c.Agent == "analysis" ? "ANALYSIS" : "CLAUDE");
 
         private GUIStyle _card, _cardOpen, _youBlock, _claudeBlock, _inset, _metaInfo,
                          _whoYou, _badge, _body, _title, _arrow, _date, _rel, _meta, _group,
@@ -181,16 +198,16 @@ namespace AgenLink.History
 
                 if (c.MetaOnly)
                 {
-                    GUILayout.Label("This session's content is stored by Antigravity itself. Reopen it with " +
-                                    "“agy --continue” in the Terminal, or in the Antigravity app.", _metaInfo);
+                    GUILayout.Label("This session's content is stored by " + AgentName(c) + " itself. " +
+                                    (CliRegistry.Find(c.Agent)?.ResumeHint ?? ""), _metaInfo);
                 }
                 else
                 {
                     for (int t = 0; t < c.Turns.Count; t++)
                         DrawTurn(i, t, c.Turns[t], c);
-                    if (c.Agent == "antigravity")
-                        GUILayout.Label("Antigravity keeps its replies in its own store — reopen this conversation " +
-                                        "with “agy --continue” in the Terminal.", _metaInfo);
+                    var provider = CliRegistry.Find(c.Agent);
+                    if (provider != null && provider.Id != "claude")
+                        GUILayout.Label(provider.ResumeHint, _metaInfo);
                 }
                 GUILayout.Space(6);
             }
@@ -220,7 +237,7 @@ namespace AgenLink.History
                 else if (t.Kind == TurnKind.Action) actions++;
             }
             string p = prompts + (prompts == 1 ? " prompt" : " prompts");
-            if (c.Agent == "antigravity") return p + " · replies in agy";
+            if (c.Agent != "claude" && CliRegistry.Find(c.Agent) != null) return p + " · replies in " + c.Agent;
             return p + " · " + actions + (actions == 1 ? " action" : " actions");
         }
 
@@ -342,9 +359,7 @@ namespace AgenLink.History
 
         private bool PassesFilter(Conversation c, DateTime now)
         {
-            if (_agentIndex == 1 && c.Agent != "claude") return false;
-            if (_agentIndex == 2 && c.Agent != "antigravity") return false;
-            if (_agentIndex == 3 && c.Agent != "analysis") return false;
+            if (_agentIndex > 0 && AgentFilterIndex(c.Agent) != _agentIndex) return false;
             switch (_filterIndex)
             {
                 case 1: return c.StartedAt.Date == now.Date;
@@ -363,8 +378,12 @@ namespace AgenLink.History
                 List<Conversation> result;
                 try
                 {
-                    result = TranscriptReader.LoadAll(root);
-                    result.AddRange(AgenLink.Cli.CliRegistry.Find("antigravity").LoadHistory(root));
+                    result = new List<Conversation>();
+                    foreach (var provider in CliRegistry.All)
+                    {
+                        try { result.AddRange(provider.LoadHistory(root)); }
+                        catch { /* one CLI's history must never break the tab */ }
+                    }
                     result.AddRange(Analysis.AnalysisLog.LoadConversations(root));
                     result.Sort((a, b) => b.StartedAt.CompareTo(a.StartedAt));   // keep newest-first
                 }

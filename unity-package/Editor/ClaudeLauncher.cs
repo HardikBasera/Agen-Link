@@ -152,8 +152,8 @@ namespace AgenLink
             if (!File.Exists(path))
             {
                 File.WriteAllText(path,
-                    "# Project memory\n\nShared, always-in-context project memory lives in AGENTS.md (read by both " +
-                    "the Claude and Antigravity CLIs):\n\n" + import + "\n", enc);
+                    "# Project memory\n\nShared, always-in-context project memory lives in AGENTS.md (read by the " +
+                    "Claude, Antigravity and Codex CLIs):\n\n" + import + "\n", enc);
                 return;
             }
             if (!File.ReadAllText(path).Contains("AGENTS.md"))
@@ -165,7 +165,7 @@ namespace AgenLink
             string path = Path.Combine(root, ".gitignore");
             string existing = File.Exists(path) ? File.ReadAllText(path) : "";
             const string header = "# ----- Agen-Link (local, do not commit) -----";
-            string[] entries = { "AgenLink~/", ".gemini/", "AGENTS.md", "CLAUDE.md", "GEMINI.md" };
+            string[] entries = { "AgenLink~/", ".gemini/", ".codex/", "AGENTS.md", "CLAUDE.md", "GEMINI.md" };
 
             var add = new StringBuilder();
             if (!existing.Contains(header)) add.Append('\n').Append(header).Append('\n');
@@ -185,9 +185,9 @@ namespace AgenLink
             string rpName = rp != null ? rp.GetType().Name : "Built-in Render Pipeline";
             var sb = new StringBuilder();
             sb.Append("# Project memory (Agen-Link, shared)\n\n");
-            sb.Append("> Local & gitignored. Read by BOTH the Claude and Antigravity CLIs launched from the Unity\n");
-            sb.Append("> \"Agen-Link\" terminal. Record durable knowledge here so the other CLI does not have to\n");
-            sb.Append("> re-scan the project from scratch.\n\n");
+            sb.Append("> Local & gitignored. Read by the Claude, Antigravity and Codex CLIs launched from the\n");
+            sb.Append("> Unity \"Agen-Link\" terminal. Record durable knowledge here so the other CLIs do not have\n");
+            sb.Append("> to re-scan the project from scratch.\n\n");
             sb.Append("## This project\n\n");
             sb.Append("- Unity ").Append(Application.unityVersion).Append('\n');
             sb.Append("- Product: ").Append(Application.productName).Append('\n');

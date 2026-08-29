@@ -25,7 +25,8 @@ The Agen-Link window has these tabs:
   History   -> browse your past AI conversations for this project
   GitHub    -> one-click whole-project backup (browser sign-in)
   Neuron    -> a live knowledge graph of your project
-  Settings  -> CLI (Claude, Antigravity, or Codex), font size, bridge port, MCP/agy paths
+  Settings  -> CLI (Claude, Antigravity, or Codex), font size, bridge port,
+               MCP server + a path override for each CLI
 
 In this folder:
   unity-package/   -> the part you add to Unity

@@ -1,30 +1,31 @@
 ============================================================
  AGEN-LINK - INSTALL GUIDE  (Windows)
- Run an AI CLI (Claude, or Antigravity - formerly Google Gemini) inside the Unity Editor.
+ Run an AI CLI (Claude, Antigravity - formerly Google Gemini, or Codex) inside the Unity Editor.
 ============================================================
 
 WHAT THIS IS
 ------------
 A Unity tool. It puts a real terminal - running your AI coding CLI (Claude Code,
-or Google Antigravity, formerly Google Gemini) - inside a window in the Unity
-Editor, right next to your project. You type prompts; the AI writes and edits the
-C# scripts in your open project, reads your Console / compile errors to fix code,
-audits and optimizes your scene, maps your project as a knowledge graph, keeps a
-local history, and can back the whole project up to GitHub.
+Google Antigravity - formerly Google Gemini, or OpenAI's Codex) - inside a
+window in the Unity Editor, right next to your project. You type prompts; the
+AI writes and edits the C# scripts in your open project, reads your Console /
+compile errors to fix code, audits and optimizes your scene, maps your project
+as a knowledge graph, keeps a local history, and can back the whole project up
+to GitHub.
 
-IT'S YOUR REAL CLI - YOU KEEP EVERYTHING. Agen-Link runs the actual Claude or
-Antigravity CLI, not a stripped-down copy. Your login, skills, plugins,
+IT'S YOUR REAL CLI - YOU KEEP EVERYTHING. Agen-Link runs the actual Claude,
+Antigravity, or Codex CLI, not a stripped-down copy. Your login, skills, plugins,
 slash-commands and config all work exactly as they do in a normal terminal - so
 you lose no features and you work the same way you already do outside Unity.
 Agen-Link only adds a live link to your open Editor on top.
 
 The Agen-Link window has these tabs:
-  Terminal  -> the embedded AI CLI - Claude or Antigravity (the main surface)
+  Terminal  -> the embedded AI CLI - Claude, Antigravity, or Codex (the main surface)
   Analysis  -> one-click scene + asset optimization audit, with safe auto-fixes
   History   -> browse your past AI conversations for this project
   GitHub    -> one-click whole-project backup (browser sign-in)
   Neuron    -> a live knowledge graph of your project
-  Settings  -> CLI (Claude or Antigravity), font size, bridge port, MCP/agy paths
+  Settings  -> CLI (Claude, Antigravity, or Codex), font size, bridge port, MCP/agy paths
 
 In this folder:
   unity-package/   -> the part you add to Unity
@@ -81,7 +82,17 @@ Claude CLI itself.
        Install from  https://antigravity.google/docs/cli-install
        agy           (sign in once, then exit)
 
-   You can switch between Claude and Antigravity later in the Settings tab.
+4. (Optional) To also run OpenAI's Codex agent in the terminal, install the
+   Codex CLI and sign in:
+
+       npm install -g @openai/codex     (or use the Windows installer)
+       codex                            (sign in once, then exit)
+
+   Agen-Link adds its Unity bridge to Codex at launch using command-line
+   config overrides - your ~/.codex/config.toml is never modified.
+
+   You can switch between Claude, Antigravity, and Codex later in the
+   Settings tab.
 
 
 ============================================================
@@ -188,12 +199,13 @@ NOTE - "Add package from git URL..." does NOT work for Agen-Link.
  STEP 4 - USE IT (the Terminal tab)
 ============================================================
 1. Top menu:  Window  ->  Agen-Link
-   (Settings tab: pick the CLI - Claude or Antigravity. Default is Claude.)
+   (Settings tab: pick the CLI - Claude, Antigravity, or Codex. Default is Claude.)
 2. Go to the "Terminal" tab and press  "Start session".
-   This launches your selected CLI (Claude or Antigravity) inside Unity - your login,
-   skills, plugins and slash-commands all apply. The Unity MCP server is added on
-   top, so it can read your live Editor (Console, compile errors, scene), and
-   both CLIs share one local project memory (AGENTS.md + the agen_memory_* tools).
+   This launches your selected CLI (Claude, Antigravity, or Codex) inside Unity -
+   your login, skills, plugins and slash-commands all apply. The Unity MCP server
+   is added on top, so it can read your live Editor (Console, compile errors,
+   scene), and all three CLIs share one local project memory (AGENTS.md + the
+   agen_memory_* tools).
 3. Type a prompt, for example:
       Create Assets/Scripts/Hello.cs with a MonoBehaviour that logs
       "Hello from Claude" on Start.
@@ -239,19 +251,22 @@ GITHUB  (optional, whole-project backup)
 ============================================================
  SETTINGS TAB
 ============================================================
-- CLI: choose Claude or Antigravity for the Terminal (restart the session to apply).
+- CLI: choose Claude, Antigravity, or Codex for the Terminal (restart the
+  session to apply).
 - Terminal font size.
 - Bridge port + "Restart bridge": change the port if another open Unity Editor
   is already using 6577.
 - MCP server path: auto-detected; only set this if it says "not found".
 - Antigravity CLI path: auto-detected from %LOCALAPPDATA%\agy; set only if agy isn't found.
+- Codex CLI path: auto-detected from npm global / the Windows installer / PATH;
+  set only if Codex isn't found.
 
 SHARED MEMORY
-  Both CLIs read/write one local project memory, so you don't re-explain the
-  project when you switch. It lives in (gitignored): AGENTS.md (always loaded
-  into context) + AgenLink~/memory/ (searched via the agen_memory_* tools). Tell
-  either CLI to "remember" something and the other can recall it - neither has to
-  re-scan the project from scratch.
+  All three CLIs read/write one local project memory, so you don't re-explain
+  the project when you switch. It lives in (gitignored): AGENTS.md (always
+  loaded into context) + AgenLink~/memory/ (searched via the agen_memory_*
+  tools). Tell one CLI to "remember" something and the others can recall it -
+  none of them has to re-scan the project from scratch.
 
 
 ============================================================
@@ -299,6 +314,7 @@ winget is not recognized
 ============================================================
 0. Install Node.js, then:  npm install -g @anthropic-ai/claude-code  ->  claude (log in)
    (optional) install the Antigravity CLI (agy) from antigravity.google  ->  agy (sign in)  to use it too
+   (optional) install Codex:  npm install -g @openai/codex  ->  codex (sign in)  to use it too
 1. In the folder, run "claude" and ask it to install Git + GitHub CLI + Unity Hub
    and run install\setup.cmd   (or run those commands yourself - STEP 1B)
 2. Install a Unity Editor via Unity Hub.

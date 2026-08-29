@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Added
+- **Codex CLI support.** The Terminal tab can now launch OpenAI's Codex alongside Claude and
+  Antigravity, with the same `agen_*` Unity bridge, shared `AGENTS.md` project memory, and History
+  tab entries. Codex receives the bridge as `-c` config overrides at launch, so `~/.codex/config.toml`
+  is never modified; only the `agen_*` tools are auto-approved, and Codex's own sandbox and approval
+  settings are untouched.
+
+### Changed
+- CLI support is now driven by a provider registry (`Editor/Cli/`) rather than a hardcoded
+  Claude-or-Antigravity branch, so the Settings picker, path overrides, and History badges/filters all
+  derive from one list.
+
 ### Fixed
 - **`npm test` in `pty-host/` failed on Node 24.** The script ran `node --test test/`, and Node 24 no
   longer expands a bare directory argument — positional arguments are treated as file/glob patterns, so
@@ -17,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provable on. A second, non-required `pty-host tests (Node 24)` job now guards the other end of the
   supported range. It is deliberately a separate job rather than a matrix, because `pty-host tests` is a
   required status check and a matrix would rename it, leaving the required check permanently unreported.
-
 ## [0.3.2] - 2026-08-24
 
 ### Changed

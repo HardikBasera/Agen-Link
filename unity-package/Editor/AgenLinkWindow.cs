@@ -174,8 +174,10 @@ namespace AgenLink
 
             if (_termView == null && !PtyHostLauncher.HostAlive())
             {
-                EditorGUILayout.HelpBox("Press ▶ Start session to launch the real Claude CLI here. Your login, skills, " +
-                                        "plugins and commands all apply; the Agen-Link bridge is added automatically.", MessageType.Info);
+                EditorGUILayout.HelpBox("Press ▶ Start session to launch the real " +
+                                        Cli.CliRegistry.Current.DisplayName + " CLI here. Your login, skills, " +
+                                        "plugins and commands all apply; the Agen-Link bridge is added automatically.",
+                                        MessageType.Info);
                 return;
             }
 
@@ -553,10 +555,10 @@ namespace AgenLink
 
             EditorGUILayout.LabelField("Terminal", EditorStyles.boldLabel);
 
-            string[] cliLabels = { "Claude", "Antigravity" };
-            int cliSel = BridgeSettings.TerminalCli == "antigravity" ? 1 : 0;
+            string[] cliLabels = Cli.CliRegistry.DisplayNames;
+            int cliSel = Mathf.Max(0, Cli.CliRegistry.IndexOf(BridgeSettings.TerminalCli));
             int cliNext = EditorGUILayout.Popup("CLI", cliSel, cliLabels);
-            if (cliNext != cliSel) BridgeSettings.TerminalCli = cliNext == 1 ? "antigravity" : "claude";
+            if (cliNext != cliSel) BridgeSettings.TerminalCli = Cli.CliRegistry.All[cliNext].Id;
             EditorGUILayout.LabelField("Restart the terminal session to apply a new CLI.", EditorStyles.miniLabel);
 
             int font = EditorGUILayout.IntSlider("Font size", BridgeSettings.TerminalFontSize, 8, 28);
@@ -583,31 +585,22 @@ namespace AgenLink
             }
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Claude CLI", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Resolved:", Cli.CliRegistry.Find("claude").ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.BeginHorizontal();
-            BridgeSettings.ClaudePath = EditorGUILayout.TextField("Override", BridgeSettings.ClaudePath);
-            if (GUILayout.Button("Browse", GUILayout.Width(70)))
+            foreach (var provider in Cli.CliRegistry.All)
             {
-                string cp = EditorUtility.OpenFilePanel("Select claude.exe", "", "exe");
-                if (!string.IsNullOrEmpty(cp)) BridgeSettings.ClaudePath = cp;
+                EditorGUILayout.Space(8);
+                EditorGUILayout.LabelField(provider.SettingsHeading, EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Resolved:", provider.ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.BeginHorizontal();
+                string edited = EditorGUILayout.TextField("Override", provider.PathOverride);
+                if (edited != provider.PathOverride) { provider.PathOverride = edited; provider.InvalidateResolveCache(); }
+                if (GUILayout.Button("Browse", GUILayout.Width(70)))
+                {
+                    string picked = EditorUtility.OpenFilePanel("Select " + provider.ExeFileName, "", "exe");
+                    if (!string.IsNullOrEmpty(picked)) { provider.PathOverride = picked; provider.InvalidateResolveCache(); }
+                }
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.LabelField(provider.AutoDetectHint, EditorStyles.miniLabel);
             }
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField("Auto-detected from npm global / PATH. Set only if Claude isn't found.", EditorStyles.miniLabel);
-
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Antigravity CLI (agy)", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Resolved:", Cli.CliRegistry.Find("antigravity").ResolveDisplay(), EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.BeginHorizontal();
-            BridgeSettings.AntigravityPath = EditorGUILayout.TextField("Override", BridgeSettings.AntigravityPath);
-            if (GUILayout.Button("Browse", GUILayout.Width(70)))
-            {
-                string gp = EditorUtility.OpenFilePanel("Select agy.exe", "", "exe");
-                if (!string.IsNullOrEmpty(gp)) BridgeSettings.AntigravityPath = gp;
-            }
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField("Auto-detected from %LOCALAPPDATA%\\agy. Set only if agy isn't found.", EditorStyles.miniLabel);
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Code execution", EditorStyles.boldLabel);
@@ -621,10 +614,11 @@ namespace AgenLink
                                            EditorStyles.miniLabel);
 
             EditorGUILayout.Space(8);
-            EditorGUILayout.HelpBox("The Terminal tab runs your selected CLI (Claude or Antigravity) with your own config, " +
-                                    "skills and plugins. The bridge + MCP server above let it read live editor state " +
-                                    "(console, compile errors, scene), edit the scene/objects/assets, edit files, and share " +
-                                    "project memory across both CLIs (agen_memory_* tools + a local AGENTS.md).", MessageType.Info);
+            EditorGUILayout.HelpBox("The Terminal tab runs your selected CLI (Claude, Antigravity or Codex) with your " +
+                                    "own config, skills and plugins. The bridge + MCP server above let it read live " +
+                                    "editor state (console, compile errors, scene), edit the scene/objects/assets, edit " +
+                                    "files, and share project memory across all three CLIs (agen_memory_* tools + a " +
+                                    "local AGENTS.md).", MessageType.Info);
 
             EditorGUILayout.EndScrollView();
         }

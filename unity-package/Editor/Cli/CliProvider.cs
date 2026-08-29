@@ -48,12 +48,25 @@ namespace AgenLink.Cli
         /// <summary>Conversations for the History tab. Never throws; returns empty on failure.</summary>
         public abstract List<Conversation> LoadHistory(string projectRoot);
 
-        /// <summary>Non-throwing description for the Settings label.</summary>
+        private string _displayCache;
+        private double _displayCacheAt;
+
+        /// <summary>
+        /// Non-throwing description for the Settings label. Cached for a second: this walks PATH, and
+        /// the Settings tab repaints continuously while focused.
+        /// </summary>
         public string ResolveDisplay()
         {
-            try { return ResolveExe(); }
-            catch (Exception e) { return "(not found) " + e.Message; }
+            double now = EditorApplication.timeSinceStartup;
+            if (_displayCache != null && now - _displayCacheAt < 1.0) return _displayCache;
+            try { _displayCache = ResolveExe(); }
+            catch (Exception e) { _displayCache = "(not found) " + e.Message; }
+            _displayCacheAt = now;
+            return _displayCache;
         }
+
+        /// <summary>Drop the cached resolution — call after the user edits the path override.</summary>
+        public void InvalidateResolveCache() { _displayCache = null; }
 
         /// <summary>First match for <paramref name="exeFileName"/> on PATH, or null.</summary>
         protected static string ScanPath(string exeFileName)

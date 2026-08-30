@@ -43,11 +43,30 @@ namespace AgenLink.Cli
             if (!string.IsNullOrEmpty(custom) && File.Exists(custom)) return custom;
 
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string npmGlobal = Path.Combine(appData, "npm", "node_modules", "@openai", "codex", "bin", "codex.exe");
-            if (File.Exists(npmGlobal)) return npmGlobal;
+            string npmRoot = Path.Combine(appData, "npm", "node_modules");
 
-            // Standalone Windows installer. These candidates are unverified — the first live run
-            // records the real one; if it took the PATH fallback below, add it here.
+            // The npm package's own bin/ holds only a JS shim (bin/codex.js) — VERIFIED against
+            // @openai/codex 0.151.0, where this path does NOT exist. Kept in case a future release
+            // ships a real exe there.
+            string npmBin = Path.Combine(npmRoot, "@openai", "codex", "bin", "codex.exe");
+            if (File.Exists(npmBin)) return npmBin;
+
+            // The native binary ships in a per-platform package, @openai/codex-win32-<arch>, under
+            // vendor/<target triple>/bin. npm 11 nests that inside the codex package; other npm
+            // versions hoist it to the global root, and the triple differs on arm64 — so enumerate
+            // both parents rather than hardcoding one layout.
+            foreach (string parent in new[]
+                     {
+                         Path.Combine(npmRoot, "@openai", "codex", "node_modules", "@openai"),
+                         Path.Combine(npmRoot, "@openai"),
+                     })
+            {
+                string vendored = FindVendoredExe(parent);
+                if (vendored != null) return vendored;
+            }
+
+            // Standalone Windows installer. These candidates are unverified — npm is the documented
+            // route and the only one confirmed live.
             string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             foreach (string candidate in new[]
@@ -63,10 +82,46 @@ namespace AgenLink.Cli
             string onPath = ScanPath(ExeFileName);
             if (onPath != null) return onPath;
 
+            // npm puts codex.cmd/codex (shell shims) on PATH, never codex.exe. pty-host spawns an argv
+            // array through CreateProcess, which cannot execute a .cmd, so a shim is not a usable
+            // answer — say so, or "codex runs in my terminal but Agen-Link cannot find it" is baffling.
+            string shim = ScanPath("codex.cmd");
+            if (shim != null)
+            {
+                throw new Exception(
+                    "Found the npm shim at " + shim + " but not codex.exe itself. The real binary lives " +
+                    "under @openai/codex-win32-x64/vendor/<triple>/bin — point Agen-Link \u25b8 Settings " +
+                    "\u25b8 Codex CLI at it.");
+            }
+
             throw new Exception(
                 "Could not find codex.exe. Install the Codex CLI (npm i -g @openai/codex, or the Windows " +
                 "installer from https://developers.openai.com/codex/cli), or set its path in " +
                 "Agen-Link \u25b8 Settings \u25b8 Codex CLI.");
+        }
+
+        /// <summary>
+        /// Look for &lt;parent&gt;/codex-win32-*/vendor/&lt;triple&gt;/bin/codex.exe — the layout the npm
+        /// package uses to ship its native binary.
+        /// </summary>
+        private string FindVendoredExe(string parent)
+        {
+            try
+            {
+                if (!Directory.Exists(parent)) return null;
+                foreach (string platformPkg in Directory.GetDirectories(parent, "codex-win32-*"))
+                {
+                    string vendor = Path.Combine(platformPkg, "vendor");
+                    if (!Directory.Exists(vendor)) continue;
+                    foreach (string triple in Directory.GetDirectories(vendor))
+                    {
+                        string exe = Path.Combine(triple, "bin", ExeFileName);
+                        if (File.Exists(exe)) return exe;
+                    }
+                }
+            }
+            catch { /* unreadable node_modules */ }
+            return null;
         }
 
         /// <summary>

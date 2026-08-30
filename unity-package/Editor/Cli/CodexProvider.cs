@@ -179,96 +179,19 @@ namespace AgenLink.Cli
         }
 
         /// <summary>
-        /// Codex records prompts in $CODEX_HOME/history.jsonl (default ~/.codex) when history
-        /// persistence is on. The schema is not contractual, so every field is probed leniently and
-        /// any failure falls back to metadata-only stubs from our own sessions.jsonl.
+        /// Metadata-only stubs from our own sessions.jsonl. Codex's ~/.codex/history.jsonl was
+        /// examined live (v0.151.0) and cannot do better: a record is {session_id, ts, text} — three
+        /// fields, confirmed against both a real file and the serde metadata in codex.exe. It carries
+        /// no cwd/workspace/project field of any name, and it is one GLOBAL file shared by every
+        /// project, so there is no way to tell which of a user's projects a prompt belongs to. An
+        /// earlier revision parsed it and lenient-probed for a project key; every record was
+        /// necessarily skipped, so it was dead code that read as a working feature. Codex does keep
+        /// per-project threads, but in SQLite (state_*.sqlite) — reviving richer history means taking
+        /// a SQLite dependency, not restoring the JSONL reader.
         /// </summary>
         public override List<Conversation> LoadHistory(string projectRoot)
         {
-            List<Conversation> rich = LoadFromCodexHistory(projectRoot);
-            return rich.Count > 0 ? rich : SessionLog.LoadStubs(projectRoot, Id, "Codex session");
-        }
-
-        private List<Conversation> LoadFromCodexHistory(string projectRoot)
-        {
-            var byConv = new Dictionary<string, Conversation>();
-            var order = new List<Conversation>();
-            try
-            {
-                string home = Environment.GetEnvironmentVariable("CODEX_HOME");
-                if (string.IsNullOrEmpty(home))
-                    home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
-                string path = Path.Combine(home, "history.jsonl");
-                if (!File.Exists(path)) return order;
-
-                string want = SessionLog.Norm(projectRoot);
-                foreach (string raw in File.ReadAllLines(path))
-                {
-                    if (string.IsNullOrWhiteSpace(raw)) continue;
-                    Newtonsoft.Json.Linq.JObject o;
-                    try { o = Newtonsoft.Json.Linq.JObject.Parse(raw); } catch { continue; }
-
-                    string cwd = First(o, "cwd", "workspace", "project", "project_root");
-                    // No recognisable cwd means we cannot prove the record belongs to this project.
-                    // Skip it: the project-scoped sessions.jsonl stub fallback is the reliable path, and
-                    // keeping unattributable records would both mis-attribute them and suppress that fallback.
-                    if (string.IsNullOrEmpty(cwd) || SessionLog.Norm(cwd) != want) continue;
-
-                    string prompt = First(o, "text", "display", "prompt", "message")?.Trim();
-                    if (string.IsNullOrEmpty(prompt)) continue;
-
-                    string convId = First(o, "session_id", "conversationId", "conversation_id", "id") ?? "?";
-                    DateTime ts = ParseTimestamp(o);
-
-                    if (!byConv.TryGetValue(convId, out Conversation conv))
-                    {
-                        conv = new Conversation
-                        {
-                            Title = SessionLog.Truncate(prompt, 60),
-                            StartedAt = ts,
-                            Agent = Id,
-                        };
-                        byConv[convId] = conv;
-                        order.Add(conv);
-                    }
-                    conv.Turns.Add(new ConvTurn(TurnKind.You, prompt));
-                }
-            }
-            catch { /* unreadable -> fall back to stubs */ }
-            return order;
-        }
-
-        private static string First(Newtonsoft.Json.Linq.JObject o, params string[] names)
-        {
-            foreach (string n in names)
-            {
-                var token = o[n];
-                if (token != null && token.Type != Newtonsoft.Json.Linq.JTokenType.Null)
-                {
-                    string s = (string)token;
-                    if (!string.IsNullOrEmpty(s)) return s;
-                }
-            }
-            return null;
-        }
-
-        private static DateTime ParseTimestamp(Newtonsoft.Json.Linq.JObject o)
-        {
-            foreach (string n in new[] { "ts", "timestamp", "created_at", "time" })
-            {
-                var token = o[n];
-                if (token == null) continue;
-                if (token.Type == Newtonsoft.Json.Linq.JTokenType.Integer)
-                {
-                    long v = (long)token;
-                    // Seconds vs milliseconds since epoch.
-                    return v > 100000000000L
-                        ? DateTimeOffset.FromUnixTimeMilliseconds(v).LocalDateTime
-                        : DateTimeOffset.FromUnixTimeSeconds(v).LocalDateTime;
-                }
-                if (DateTime.TryParse((string)token, out DateTime parsed)) return parsed.ToLocalTime();
-            }
-            return DateTime.MinValue;
+            return SessionLog.LoadStubs(projectRoot, Id, "Codex session");
         }
     }
 }

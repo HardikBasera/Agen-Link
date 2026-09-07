@@ -9,49 +9,6 @@ using UnityEngine.Rendering;
 
 namespace AgenLink
 {
-    /// <summary>Locates the Claude CLI executable.</summary>
-    internal static class ClaudeCli
-    {
-        /// <summary>
-        /// Resolve the real <c>claude.exe</c>. The npm global install ships a native exe at
-        /// %APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe (the claude.cmd shim just calls it).
-        /// Launching the exe directly avoids any shell-quoting issues.
-        /// </summary>
-        public static string ResolveExe()
-        {
-            // Manual override from Settings.
-            string custom = BridgeSettings.ClaudePath;
-            if (!string.IsNullOrEmpty(custom) && File.Exists(custom)) return custom;
-
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string primary = Path.Combine(appData, "npm", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
-            if (File.Exists(primary)) return primary;
-
-            string pathVar = Environment.GetEnvironmentVariable("PATH") ?? "";
-            foreach (var dir in pathVar.Split(Path.PathSeparator))
-            {
-                if (string.IsNullOrWhiteSpace(dir)) continue;
-                try
-                {
-                    string candidate = Path.Combine(dir.Trim(), "claude.exe");
-                    if (File.Exists(candidate)) return candidate;
-                }
-                catch { /* malformed PATH entry */ }
-            }
-
-            throw new Exception(
-                "Could not find claude.exe. Install Claude Code (npm i -g @anthropic-ai/claude-code) " +
-                "or make sure it is on PATH.");
-        }
-
-        /// <summary>Non-throwing description for the Settings label.</summary>
-        public static string ResolveDisplay()
-        {
-            try { return ResolveExe(); }
-            catch (Exception e) { return "(not found) " + e.Message; }
-        }
-    }
-
     /// <summary>
     /// Builds the MCP config for each CLI (Claude: %TEMP% file passed via --mcp-config; Antigravity: the
     /// HOME-level config agy reads), generates the shared project-memory files, and resolves the MCP
@@ -195,8 +152,8 @@ namespace AgenLink
             if (!File.Exists(path))
             {
                 File.WriteAllText(path,
-                    "# Project memory\n\nShared, always-in-context project memory lives in AGENTS.md (read by both " +
-                    "the Claude and Antigravity CLIs):\n\n" + import + "\n", enc);
+                    "# Project memory\n\nShared, always-in-context project memory lives in AGENTS.md (read by the " +
+                    "Claude, Antigravity and Codex CLIs):\n\n" + import + "\n", enc);
                 return;
             }
             if (!File.ReadAllText(path).Contains("AGENTS.md"))
@@ -208,7 +165,7 @@ namespace AgenLink
             string path = Path.Combine(root, ".gitignore");
             string existing = File.Exists(path) ? File.ReadAllText(path) : "";
             const string header = "# ----- Agen-Link (local, do not commit) -----";
-            string[] entries = { "AgenLink~/", ".gemini/", "AGENTS.md", "CLAUDE.md", "GEMINI.md" };
+            string[] entries = { "AgenLink~/", ".gemini/", ".codex/", "AGENTS.md", "CLAUDE.md", "GEMINI.md" };
 
             var add = new StringBuilder();
             if (!existing.Contains(header)) add.Append('\n').Append(header).Append('\n');
@@ -228,18 +185,18 @@ namespace AgenLink
             string rpName = rp != null ? rp.GetType().Name : "Built-in Render Pipeline";
             var sb = new StringBuilder();
             sb.Append("# Project memory (Agen-Link, shared)\n\n");
-            sb.Append("> Local & gitignored. Read by BOTH the Claude and Antigravity CLIs launched from the Unity\n");
-            sb.Append("> \"Agen-Link\" terminal. Record durable knowledge here so the other CLI does not have to\n");
-            sb.Append("> re-scan the project from scratch.\n\n");
+            sb.Append("> Local & gitignored. Read by the Claude, Antigravity and Codex CLIs launched from the\n");
+            sb.Append("> Unity \"Agen-Link\" terminal. Record durable knowledge here so the other CLIs do not have\n");
+            sb.Append("> to re-scan the project from scratch.\n\n");
             sb.Append("## This project\n\n");
             sb.Append("- Unity ").Append(Application.unityVersion).Append('\n');
             sb.Append("- Product: ").Append(Application.productName).Append('\n');
             sb.Append("- Render pipeline: ").Append(rpName).Append("\n\n");
             sb.Append(BuildRulesBlock());
             sb.Append("\n## Memory & optimization\n\n");
-            sb.Append("- BEFORE scanning the project, call `agen_memory_search` to reuse what the other CLI already learned.\n");
+            sb.Append("- BEFORE scanning the project, call `agen_memory_search` to reuse what the other CLIs already learned.\n");
             sb.Append("- When you learn something durable (an architecture decision, a gotcha, where a system lives),\n");
-            sb.Append("  record it with `agen_memory_append` so the other CLI inherits it.\n");
+            sb.Append("  record it with `agen_memory_append` so the other CLIs inherit it.\n");
             sb.Append("- Scene optimization loop: `agen_audit_scene` + `agen_audit_assets` (structured findings), then\n");
             sb.Append("  `agen_perf_start` -> poll `agen_perf_status` -> `agen_perf_report` for play-mode numbers. Report\n");
             sb.Append("  findings to the user, apply agreed fixes via `agen_apply_fixes` (scene fixes are Undo-able and\n");

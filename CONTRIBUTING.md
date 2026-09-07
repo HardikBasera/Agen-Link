@@ -28,8 +28,9 @@ Keep PRs focused — one logical change per PR is much easier to review and merg
 
 ## Development setup
 
-Prerequisites: **Windows 10/11**, **Node.js 18+**, **Unity 2021.3+**, and (for testing the
-terminal) the **Claude Code** and/or **Antigravity** CLI. See `INSTALL.txt` for the full list.
+Prerequisites: **Windows 10/11**, **Node.js 20+**, **Unity 2021.3+**, and (for testing the
+terminal) at least one of the **Claude Code**, **Antigravity**, or **Codex** CLIs. See
+`INSTALL.txt` for the full list.
 
 ```powershell
 # One-time build of both Node helpers (installs deps, rebuilds native node-pty, builds mcp-server)

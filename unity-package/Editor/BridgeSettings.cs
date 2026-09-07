@@ -72,7 +72,8 @@ namespace AgenLink
             set => EditorPrefs.SetInt("AgenLink.Term.Font", value);
         }
 
-        /// <summary>Which CLI the terminal launches: "claude" (default) or "antigravity". Applied on restart.</summary>
+        /// <summary>Which CLI the terminal launches: "claude" (default), "antigravity" or "codex".
+        /// Validated through CliRegistry.Current. Applied on restart.</summary>
         public static string TerminalCli
         {
             get => EditorPrefs.GetString("AgenLink.Term.Cli", "claude");
@@ -91,6 +92,13 @@ namespace AgenLink
         {
             get => EditorPrefs.GetString("AgenLink.AntigravityPath", "");
             set => EditorPrefs.SetString("AgenLink.AntigravityPath", value);
+        }
+
+        /// <summary>Absolute path to the Codex CLI (codex.exe). Empty = auto-detect.</summary>
+        public static string CodexPath
+        {
+            get => EditorPrefs.GetString("AgenLink.CodexPath", "");
+            set => EditorPrefs.SetString("AgenLink.CodexPath", value);
         }
 
         /// <summary>Whether the agen_execute_code tool may compile and run arbitrary C# in the Editor.

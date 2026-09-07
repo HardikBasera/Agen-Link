@@ -4,7 +4,7 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "description": "MCP server exposing the live Unity Editor (console, compile errors, project info, scene) to Claude over a localhost TCP bridge.",
+  "description": "MCP server exposing the live Unity Editor to an AI CLI (Claude Code, Antigravity, or Codex) over a localhost TCP bridge: reads console, compile errors, project info and the scene, and drives GameObjects, components, assets, play mode and the Test Runner.",
   "bin": {
     "agen-link-mcp": "build/index.js"
   },

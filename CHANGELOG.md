@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`npm test` in `pty-host/` failed on Node 24.** The script ran `node --test test/`, and Node 24 no
+  longer expands a bare directory argument — positional arguments are treated as file/glob patterns, so
+  it tried to load `test/` as a module and died with `MODULE_NOT_FOUND` before running anything. Since
+  `README.md` and `INSTALL.txt` promise "Node 20+", any contributor on a current Node hit it. The script
+  is now `node --test`, whose default discovery finds both files on Node 20 and Node 24 alike.
+  CI could not have caught this: it pins Node 20, which is also the only version the fix was previously
+  provable on. A second, non-required `pty-host tests (Node 24)` job now guards the other end of the
+  supported range. It is deliberately a separate job rather than a matrix, because `pty-host tests` is a
+  required status check and a matrix would rename it, leaving the required check permanently unreported.
+
 ## [0.3.2] - 2026-08-24
 
 ### Changed

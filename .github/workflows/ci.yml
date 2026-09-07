@@ -59,3 +59,27 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+
+  # Node 20 is the floor the docs promise; this job guards the other end of the range.
+  # It is deliberately a SEPARATE job rather than a matrix on "pty-host tests": that name is a
+  # required status check in the "main protection" ruleset, and adding a matrix would rename it to
+  # "pty-host tests (20)", so the required check would never report again and every PR would block.
+  # Not required to pass, so a future Node quirk surfaces as a signal instead of a merge blocker.
+  pty-host-node-latest:
+    name: pty-host tests (Node 24)
+    runs-on: windows-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: pty-host
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: pty-host/package-lock.json
+      - name: Install (node-pty native build runs here)
+        run: npm ci
+      - name: Run tests
+        run: npm test

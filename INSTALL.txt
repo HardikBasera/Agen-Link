@@ -42,13 +42,15 @@ This build targets WINDOWS 10/11.
 ============================================================
  TWO WAYS TO INSTALL
 ============================================================
-There is one thing you must install BY HAND first: the Claude Code CLI
-(it is the "brain" - it cannot install itself). After that, you can let
-CLAUDE ITSELF install and build everything else for you from the terminal.
+There is one thing you must install BY HAND first: an AI CLI - Claude Code,
+Antigravity, or Codex (it is the "brain" - it cannot install itself). Any one
+of the three is enough to use Agen-Link. If you pick Claude Code, you can then
+let CLAUDE ITSELF install and build everything else for you from the terminal.
 
   * EASY PATH  -> do STEP 0, then paste one instruction into "claude"
-                 and it installs/builds the rest (STEP 1A).
-  * MANUAL PATH-> do STEP 0, then run the commands yourself (STEP 1B).
+                 and it installs/builds the rest (STEP 1A). Claude Code only.
+  * MANUAL PATH-> do STEP 0, then run the commands yourself (STEP 1B). Use this
+                 if you installed Antigravity or Codex instead of Claude.
 
 Either way you still install Unity via Unity Hub by hand (STEP 2), because
 choosing a Unity version and signing in is a graphical step Claude can't do.
@@ -57,8 +59,10 @@ choosing a Unity version and signing in is a graphical step Claude can't do.
 ============================================================
  STEP 0 - BOOTSTRAP (always required, by hand)
 ============================================================
-You need Node.js (to run the helpers AND to install the Claude CLI), then the
-Claude CLI itself.
+You need Node.js (to run the helpers AND to install the CLIs), then at least
+one AI CLI. Claude Code is shown first because it unlocks the EASY PATH below;
+if you would rather use Antigravity or Codex, do step 1, then skip to step 3
+or 4 and follow the MANUAL PATH (STEP 1B).
 
 1. Install Node.js 20 or newer. Easiest on Windows - open PowerShell and run:
 
@@ -69,7 +73,8 @@ Claude CLI itself.
 
        node --version
 
-2. Install the Claude Code CLI and log in:
+2. (Recommended - required only for the EASY PATH) Install the Claude Code CLI
+   and log in:
 
        npm install -g @anthropic-ai/claude-code
        claude
@@ -77,14 +82,15 @@ Claude CLI itself.
    The first time you run "claude" it opens a browser to log in. You need an
    active Claude plan. Once you see the claude prompt, type /exit for now.
 
-3. (Optional) To also run Google's Antigravity agent (formerly Google Gemini) in
-   the terminal, install the Antigravity CLI (agy) and sign in:
+3. (Optional, or use this INSTEAD of step 2) To run Google's Antigravity agent
+   (formerly Google Gemini) in the terminal, install the Antigravity CLI (agy)
+   and sign in:
 
        Install from  https://antigravity.google/docs/cli-install
        agy           (sign in once, then exit)
 
-4. (Optional) To also run OpenAI's Codex agent in the terminal, install the
-   Codex CLI and sign in:
+4. (Optional, or use this INSTEAD of step 2) To run OpenAI's Codex agent in the
+   terminal, install the Codex CLI and sign in:
 
        npm install -g @openai/codex     (or use the Windows installer)
        codex                            (sign in once, then exit)
@@ -209,8 +215,8 @@ NOTE - "Add package from git URL..." does NOT work for Agen-Link.
    agen_memory_* tools).
 3. Type a prompt, for example:
       Create Assets/Scripts/Hello.cs with a MonoBehaviour that logs
-      "Hello from Claude" on Start.
-   Claude works, then Unity recompiles and the new/edited files appear.
+      "Hello from Agen-Link" on Start.
+   The AI works, then Unity recompiles and the new/edited files appear.
 
 It can also change files you already have, e.g.:
       Add a public ResetScore() method to my GameManager and call it from Start.
@@ -229,14 +235,15 @@ The session SURVIVES script recompiles (it reconnects and replays). Use
  OTHER TABS (quick tour)
 ============================================================
 HISTORY
-  A read-only browser of your past Claude conversations for this project
-  (grouped Today / Yesterday / This week / Older). Shows your prompts, Claude's
-  replies, and compact action markers like "edited PlayerController.cs".
+  A read-only browser of your past AI conversations for this project, across
+  all three CLIs (grouped Today / Yesterday / This week / Older). Shows your
+  prompts, the AI's replies, and compact action markers like "edited
+  PlayerController.cs". Each card is badged with the CLI that produced it.
 
 NEURON  (project knowledge graph)
   A live, Assets-only dependency graph built right in the Editor (no internet).
   Scenes are clusters, related scripts group into "systems", and you can switch
-  between Overview and a Focused neighbourhood view. Ask Claude
+  between Overview and a Focused neighbourhood view. Ask the AI
   "analyze and name the Neuron systems" to get human-readable system names.
 
 GITHUB  (optional, whole-project backup)
@@ -303,7 +310,7 @@ GitHub tab says gh is not found
 
 Compile errors in the Console right after adding the package
     -> The C# only compiles inside Unity, so a fresh machine may surface an
-       issue. Start a Terminal session and ask Claude to fix the errors it sees.
+       issue. Start a Terminal session and ask the AI to fix the errors it sees.
 
 winget is not recognized
     -> winget ships with Windows 10/11 "App Installer". Update it from the

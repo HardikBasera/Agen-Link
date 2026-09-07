@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI support is now driven by a provider registry (`Editor/Cli/`) rather than a hardcoded
   Claude-or-Antigravity branch, so the Settings picker, path overrides, and History badges/filters all
   derive from one list.
+- **The Unity Package Manager description no longer describes Agen-Link as a Claude-only MCP tool.** It
+  named a single CLI and listed only the read-only bridge, so the package page understated both the
+  supported agents and everything the bridge has been able to do since v0.2.0. It now names all three
+  CLIs and says the AI both reads and drives the Editor, and the package keywords were widened to
+  match. `INSTALL.txt` and `CONTRIBUTING.md` lost their remaining
+  Claude-only phrasing for the same reason — installing any one of the three CLIs is enough, which the
+  prerequisites did not say. `CONTRIBUTING.md` also still claimed a Node 18 floor, which v0.3.0 raised
+  to 20.
 
 ### Fixed
 - **`npm test` in `pty-host/` failed on Node 24.** The script ran `node --test test/`, and Node 24 no

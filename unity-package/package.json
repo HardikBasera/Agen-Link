@@ -6,15 +6,20 @@
     "com.unity.nuget.newtonsoft-json": "3.2.1"
   },
   "displayName": "Agen-Link",
-  "description": "Drive Claude Code from inside the Unity Editor. Run the real Claude CLI in an embedded terminal, browse your past sessions in a conversation history, read live editor state (console, compile errors, scene) over MCP, and back the project up to GitHub.",
+  "description": "Run a real AI CLI - Claude Code, Antigravity, or Codex - inside the Unity Editor, on a live MCP bridge that lets it read your Console, errors and scene, and drive the Editor directly. Plus history and GitHub backup.",
   "unity": "2021.3",
   "author": {
     "name": "HardikBasera"
   },
   "keywords": [
-    "claude",
-    "mcp",
     "ai",
+    "agent",
+    "mcp",
+    "claude",
+    "codex",
+    "antigravity",
+    "gemini",
+    "terminal",
     "editor",
     "automation"
   ]

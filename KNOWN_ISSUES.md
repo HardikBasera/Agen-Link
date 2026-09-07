@@ -3,7 +3,7 @@
 Bugs and limitations we're aware of and have chosen to defer. If you hit one, you're not seeing
 something new — and fixes are welcome (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
-Last reviewed: 2026-08-22 (v0.2.1).
+Last reviewed: 2026-09-07 (v0.3.2).
 
 ## Installation
 

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-07
 
 ### Added
 - **Codex CLI support.** The Terminal tab can now launch OpenAI's Codex alongside Claude and
@@ -38,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provable on. A second, non-required `pty-host tests (Node 24)` job now guards the other end of the
   supported range. It is deliberately a separate job rather than a matrix, because `pty-host tests` is a
   required status check and a matrix would rename it, leaving the required check permanently unreported.
+
+### Security
+- Dependency updates clearing all open advisories in `mcp-server`: **fast-uri** 3.1.5 → 3.1.7 (three
+  high-severity advisories, fixed in 3.1.6) and **qs** 6.15.2 → 6.16.0 (one moderate). Both are
+  transitive. `zod` also moved 4.4.3 → 4.5.4, which is routine rather than a security fix. `npm audit`
+  reports 0 vulnerabilities.
+
 ## [0.3.2] - 2026-08-24
 
 ### Changed
@@ -274,7 +282,8 @@ Initial public release.
 ### Security
 - All listeners bind to localhost only; terminal host uses per-session token authentication.
 
-[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/HardikBasera/Agen-Link/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/HardikBasera/Agen-Link/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/HardikBasera/Agen-Link/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/HardikBasera/Agen-Link/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/HardikBasera/Agen-Link/compare/v0.2.1...v0.3.0
